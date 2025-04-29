@@ -19,9 +19,18 @@ void yyerror(const char *s);
 %token IF IFF_KEYWORD
 %token ASSIGN LPAREN RPAREN
 
+/* Operator precedence and associativity (lowest to highest) */
+%left IFF EQUIV                /* lowest precedence */
+%right IMPLIES
+%left XOR XNOR
+%left OR
+%left AND
+%right NOT EXISTS FORALL       /* highest precedence */
+
 %%
 
 program:
+    statement
     | program statement
     ;
 
@@ -40,7 +49,7 @@ expr:
     | expr IMPLIES expr             { $$ = create_implies_node($1, $3); }
     | expr IFF expr                 { $$ = create_iff_node($1, $3); }
     | expr EQUIV expr               { $$ = create_equiv_node($1, $3); }
-    | EXISTS IDENTIFIER expr        { $$ = create_exists_node($2, $3); }
-    | FORALL IDENTIFIER expr        { $$ = create_forall_node($2, $3); }
+    | EXISTS IDENTIFIER LPAREN expr RPAREN        { $$ = create_exists_node($2, $4); }
+    | FORALL IDENTIFIER LPAREN expr RPAREN        { $$ = create_forall_node($2, $4); }
     | LPAREN expr RPAREN            { $$ = $2; }
     ;

@@ -22,3 +22,18 @@ bison -d -o ./C_Components/parser.c parser.y
 gcc -c ./C_Components/lexer.c p./C_Components/arser.c ./C_Components/ast.c
 ar rcs liblogic.a lexer.o parser.o ast.o
 ```
+
+- Fixing ambiguity of grammar by requiring parenthese for quantified expressions.
+
+1. Added operator precedence and associativity declarations (from lowest to highest):
+
+- %left IFF EQUIV (lowest)
+  - %right IMPLIES
+  - %left XOR XNOR
+  - %left OR
+  - %left AND
+  - %right NOT EXISTS FORALL (highest)
+
+2. Modified the quantifier rules to require parentheses:
+   - EXISTS IDENTIFIER LPAREN expr RPAREN
+   - FORALL IDENTIFIER LPAREN expr RPAREN
