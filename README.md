@@ -12,15 +12,14 @@
 - Compiling lexer.l and parser.y to C components.
 
 ```
-flex -o ./C_Components/lexer.c lexer.l
+flex -o ./C_Components/lexer.c ./C_Components/lexer.l
 bison -d -o ./C_Components/parser.c parser.y
 ```
 
 - Compiling the lexer, parser and ast c files and creating a static library.
 
 ```
-gcc -c ./C_Components/lexer.c p./C_Components/arser.c ./C_Components/ast.c
-ar rcs liblogic.a lexer.o parser.o ast.o
+gcc -I./C_Components -c ./C_Components/lexer.c ./C_Components/parser.c ./C_Components/ast.c && ar rcs liblogic.a lexer.o parser.o ast.o
 ```
 
 - Fixing ambiguity of grammar by requiring parenthese for quantified expressions.

@@ -1,3 +1,13 @@
+%{
+#include <stdio.h>
+#include <string.h>
+#include "parser.h"
+
+extern YYSTYPE yylval;
+%}
+
+%option noyywrap
+
 %%
 "AND"|"and"|"&&"                     return AND;
 "OR"|"or"|"||"                       return OR;
