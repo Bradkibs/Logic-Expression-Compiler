@@ -1,1 +1,3 @@
+B = TRUE
+C = FALSE
 B OR C
