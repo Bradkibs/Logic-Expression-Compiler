@@ -7,6 +7,8 @@ extern YYSTYPE yylval;
 %}
 
 %option noyywrap
+%option yylineno
+
 
 %%
 "AND"|"and"|"&&"                     return AND;

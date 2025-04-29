@@ -62,7 +62,7 @@ expr:
     | EXISTS IDENTIFIER LPAREN expr RPAREN        { $$ = create_exists_node($2, $4); }
     | FORALL IDENTIFIER LPAREN expr RPAREN        { $$ = create_forall_node($2, $4); }
     | LPAREN expr RPAREN            { $$ = $2; }
-    | error { yyerror("Syntax error: invalid expression"); yyclearin; }
+    | error { yyerror("Syntax error: invalid expression"); YYABORT; }
     ;
 
 %%
