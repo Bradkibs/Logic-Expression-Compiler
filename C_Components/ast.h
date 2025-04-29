@@ -1,6 +1,9 @@
 #ifndef AST_H
 #define AST_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 typedef enum {
     NODE_VAR,
     NODE_ASSIGN,
@@ -23,6 +26,14 @@ typedef struct Node {
     struct Node* right;
 } Node;
 
+// Global variable for parsed expression result
+#ifdef __cplusplus
+extern "C" {
+#endif
+    extern Node* parsed_expression;
+#ifdef __cplusplus
+}
+#endif
 // Constructors
 Node* create_variable_node(char* name);
 Node* create_assignment_node(char* name, Node* expr);
@@ -39,5 +50,33 @@ Node* create_forall_node(char* var, Node* expr);
 
 void print_ast(Node* root, int indent);
 void free_ast(Node* root);
+
+// Evaluation step structure for tracking logical evaluation
+typedef struct {
+    char* step_description;
+} EvaluationStep;
+
+// Structure to hold multiple evaluation steps
+typedef struct {
+    EvaluationStep** steps;
+    int step_count;
+    int capacity;
+} EvaluationSteps;
+
+// Initialize evaluation steps structure
+extern EvaluationSteps* init_evaluation_steps();
+
+// Add a step to the evaluation steps
+extern void add_evaluation_step(EvaluationSteps* steps, const char* description);
+
+// Free evaluation steps memory
+extern void free_evaluation_steps(EvaluationSteps* steps);
+
+// Evaluate a logical expression and return the evaluation steps
+extern EvaluationSteps* evaluate_expression(const char* expression);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -1,0 +1,15 @@
+[package]
+name = "logic_semantic_analyzer"
+version = "0.1.0"
+edition = "2024"
+build = "build.rs" 
+
+[dependencies]
+libc = "0.2"
+
+[build-dependencies]
+bindgen = "0.71.1"
+
+[[bin]]
+name = "logic_runner"
+path = "src/main.rs"

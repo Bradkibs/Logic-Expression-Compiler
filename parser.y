@@ -3,6 +3,9 @@
 extern int yylex();
 extern int yyparse();
 void yyerror(const char *s);
+
+// Declare the global variable as extern (defined in parser_globals.c)
+extern Node* parsed_expression;
 %}
 
 %union {
@@ -30,8 +33,8 @@ void yyerror(const char *s);
 %%
 
 program:
-    statement
-    | program statement
+    statement              { parsed_expression = $1; }
+    | program statement    { parsed_expression = $2; }
     ;
 
 statement:

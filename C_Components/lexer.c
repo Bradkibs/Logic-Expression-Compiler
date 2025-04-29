@@ -1,6 +1,5 @@
-#line 2 "./C_Components/lexer.c"
 
-#line 4 "./C_Components/lexer.c"
+#line 3 "lex.yy.c"
 
 #define  YY_INT_ALIGNED short int
 
@@ -524,15 +523,15 @@ int yy_flex_debug = 0;
 #define YY_MORE_ADJ 0
 #define YY_RESTORE_YY_MORE_OFFSET
 char *yytext;
-#line 1 "./C_Components/lexer.l"
-#line 2 "./C_Components/lexer.l"
+#line 1 "lexer.l"
+#line 2 "lexer.l"
 #include <stdio.h>
 #include <string.h>
 #include "parser.h"
 
 extern YYSTYPE yylval;
-#line 535 "./C_Components/lexer.c"
-#line 536 "./C_Components/lexer.c"
+#line 534 "lex.yy.c"
+#line 535 "lex.yy.c"
 
 #define INITIAL 0
 
@@ -749,9 +748,9 @@ YY_DECL
 		}
 
 	{
-#line 11 "./C_Components/lexer.l"
+#line 11 "lexer.l"
 
-#line 755 "./C_Components/lexer.c"
+#line 754 "lex.yy.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -810,101 +809,101 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 12 "./C_Components/lexer.l"
+#line 12 "lexer.l"
 return AND;
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 13 "./C_Components/lexer.l"
+#line 13 "lexer.l"
 return OR;
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 14 "./C_Components/lexer.l"
+#line 14 "lexer.l"
 return NOT;
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 15 "./C_Components/lexer.l"
+#line 15 "lexer.l"
 return XOR;
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 16 "./C_Components/lexer.l"
+#line 16 "lexer.l"
 return XNOR;
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 18 "./C_Components/lexer.l"
+#line 18 "lexer.l"
 return IMPLIES;
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 19 "./C_Components/lexer.l"
+#line 19 "lexer.l"
 return IFF;
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 21 "./C_Components/lexer.l"
+#line 21 "lexer.l"
 return ASSIGN;
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 22 "./C_Components/lexer.l"
+#line 22 "lexer.l"
 return EQUIV;
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 24 "./C_Components/lexer.l"
+#line 24 "lexer.l"
 return EXISTS;
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 25 "./C_Components/lexer.l"
+#line 25 "lexer.l"
 return FORALL;
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 27 "./C_Components/lexer.l"
+#line 27 "lexer.l"
 return IF;
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 28 "./C_Components/lexer.l"
+#line 28 "lexer.l"
 return IFF_KEYWORD;
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 30 "./C_Components/lexer.l"
+#line 30 "lexer.l"
 return LPAREN;
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 31 "./C_Components/lexer.l"
+#line 31 "lexer.l"
 return RPAREN;
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 33 "./C_Components/lexer.l"
+#line 33 "lexer.l"
 { yylval.str = strdup(yytext); return IDENTIFIER; }
 	YY_BREAK
 case 17:
 /* rule 17 can match eol */
 YY_RULE_SETUP
-#line 35 "./C_Components/lexer.l"
+#line 35 "lexer.l"
 ;  // skips whitespace
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 37 "./C_Components/lexer.l"
+#line 37 "lexer.l"
 { printf("Unknown character detected: %s\n", yytext); }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 38 "./C_Components/lexer.l"
+#line 38 "lexer.l"
 ECHO;
 	YY_BREAK
-#line 908 "./C_Components/lexer.c"
+#line 907 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1909,6 +1908,6 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 38 "./C_Components/lexer.l"
+#line 38 "lexer.l"
 
 
