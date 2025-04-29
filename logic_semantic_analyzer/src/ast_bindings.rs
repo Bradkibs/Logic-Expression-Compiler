@@ -12,6 +12,7 @@ pub const NodeType_NODE_IFF: NodeType = 8;
 pub const NodeType_NODE_EQUIV: NodeType = 9;
 pub const NodeType_NODE_EXISTS: NodeType = 10;
 pub const NodeType_NODE_FORALL: NodeType = 11;
+pub const NodeType_NODE_BOOL: NodeType = 12;
 pub type NodeType = ::std::os::raw::c_uint;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -20,16 +21,21 @@ pub struct Node {
     pub name: *mut ::std::os::raw::c_char,
     pub left: *mut Node,
     pub right: *mut Node,
+    pub bool_val: ::std::os::raw::c_int,
 }
 #[allow(clippy::unnecessary_operation, clippy::identity_op)]
 const _: () = {
-    ["Size of Node"][::std::mem::size_of::<Node>() - 32usize];
+    ["Size of Node"][::std::mem::size_of::<Node>() - 40usize];
     ["Alignment of Node"][::std::mem::align_of::<Node>() - 8usize];
     ["Offset of field: Node::type_"][::std::mem::offset_of!(Node, type_) - 0usize];
     ["Offset of field: Node::name"][::std::mem::offset_of!(Node, name) - 8usize];
     ["Offset of field: Node::left"][::std::mem::offset_of!(Node, left) - 16usize];
     ["Offset of field: Node::right"][::std::mem::offset_of!(Node, right) - 24usize];
+    ["Offset of field: Node::bool_val"][::std::mem::offset_of!(Node, bool_val) - 32usize];
 };
+unsafe extern "C" {
+    pub static mut parsed_expression: *mut Node;
+}
 unsafe extern "C" {
     pub fn create_variable_node(name: *mut ::std::os::raw::c_char) -> *mut Node;
 }
