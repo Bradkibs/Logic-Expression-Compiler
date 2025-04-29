@@ -11,9 +11,14 @@ extern Node* parsed_expression;
 %union {
     char* str;
     struct Node* node;
+    int bool_val;
 }
 
 %token <str> IDENTIFIER
+%token <bool_val> T_TRUE T_FALSE
+%token INVALID_TOKEN
+
+
 %type <node> expr statement program
 
 %token AND OR NOT XOR XNOR
@@ -44,6 +49,8 @@ statement:
 
 expr:
       IDENTIFIER                    { $$ = create_variable_node($1); }
+    | T_TRUE                        { $$ = create_boolean_node(1); }
+    | T_FALSE                       { $$ = create_boolean_node(0); }
     | NOT expr                      { $$ = create_not_node($2); }
     | expr AND expr                 { $$ = create_and_node($1, $3); }
     | expr OR expr                  { $$ = create_or_node($1, $3); }
@@ -55,4 +62,7 @@ expr:
     | EXISTS IDENTIFIER LPAREN expr RPAREN        { $$ = create_exists_node($2, $4); }
     | FORALL IDENTIFIER LPAREN expr RPAREN        { $$ = create_forall_node($2, $4); }
     | LPAREN expr RPAREN            { $$ = $2; }
+    | error { yyerror("Syntax error: invalid expression"); yyclearin; }
     ;
+
+%%

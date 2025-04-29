@@ -30,9 +30,17 @@ extern YYSTYPE yylval;
 "("                                  return LPAREN;
 ")"                                  return RPAREN;
 
+"true"|"TRUE"    { yylval.bool_val = 1; return T_TRUE; }
+"false"|"FALSE"  { yylval.bool_val = 0; return T_FALSE; }
+
+
 [A-Za-z_][A-Za-z0-9_]*               { yylval.str = strdup(yytext); return IDENTIFIER; }
 
 [ \t\n\r]+                           ;  // skips whitespace
 
-.                                    { printf("Unknown character detected: %s\n", yytext); }
+.   {
+    fprintf(stderr, "Lexer error: Unrecognized character '%s' at line %d\n", yytext, yylineno);
+    return INVALID_TOKEN;
+}
+
 %%
