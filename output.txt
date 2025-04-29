@@ -1,1 +1,1 @@
-Expression: B OR C
+Expression: A = True

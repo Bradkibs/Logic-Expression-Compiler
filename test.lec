@@ -1,3 +1,6 @@
+A = True
+B = False
+C = False
 A AND B
 B OR C
 NOT A
