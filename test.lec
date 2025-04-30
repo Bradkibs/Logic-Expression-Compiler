@@ -1,6 +1,13 @@
-A = True
-B = False
-C = False
+A = TRUE
+B = FALSE
+C = FALSE
 A AND B
 B OR C
 NOT A
+(A AND B) OR NOT (B OR C)
+A --> B
+B => NOT A
+B
+NOT (A OR C)
+A ==> NOT B
+A <==> B

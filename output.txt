@@ -1,13 +1,56 @@
 Starting evaluation of multiple expressions
-Evaluating expression: B = TRUE
-Assigned B = TRUE
+Evaluating expression: A = TRUE
+Assigned A = TRUE
 Result: TRUE
+Evaluating expression: B = FALSE
+Assigned B = FALSE
+Result: FALSE
 Evaluating expression: C = FALSE
 Assigned C = FALSE
 Result: FALSE
+Evaluating expression: A AND B
+Substituted variable A with value TRUE
+Substituted variable B with value FALSE
+Evaluated AND operation
+Result: FALSE
 Evaluating expression: B OR C
-Substituted variable B with value TRUE
+Substituted variable B with value FALSE
 Substituted variable C with value FALSE
 Evaluated OR operation
+Result: FALSE
+Evaluating expression: NOT A
+Substituted variable A with value TRUE
+Evaluated NOT operation
+Result: FALSE
+Evaluating expression: (A AND B) OR NOT (B OR C)
+Substituted variable A with value TRUE
+Substituted variable B with value FALSE
+Evaluated AND operation
+Substituted variable B with value FALSE
+Substituted variable C with value FALSE
+Evaluated OR operation
+Evaluated NOT operation
+Evaluated OR operation
 Result: TRUE
+Evaluating expression: A --> B
+Substituted variable A with value TRUE
+Substituted variable B with value FALSE
+Applied Implication Law: A -> B == ~A OR B
+Could not determine a boolean result for this expression
+Evaluating expression: B => NOT A
+Failed to parse expression
+Evaluating expression: B
+Substituted variable B with value FALSE
+Result: FALSE
+Evaluating expression: A ==> NOT B
+Substituted variable A with value TRUE
+Substituted variable B with value FALSE
+Evaluated NOT operation
+Applied Implication Law: A -> B == ~A OR B
+Could not determine a boolean result for this expression
+Evaluating expression: A <==> B
+Substituted variable A with value TRUE
+Substituted variable B with value FALSE
+Applied IFF Law: A <-> B == (A -> B) AND (B -> A)
+Could not determine a boolean result for this expression
 Completed evaluation of all expressions

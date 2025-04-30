@@ -18,6 +18,8 @@ SYMBOL_TABLE_H = $(SRC_DIR)/symbol_table.h
 
 OBJS = lexer.o parser.o ast.o  symbol_table.o
 
+
+
 LIB = liblogic.a
 
 all: $(LIB)
@@ -60,4 +62,6 @@ clean:
 clean-everything: clean
 	rm -f $(LIB)
 
+frontend:
+	go build
 .PHONY: all clean clean-everything
