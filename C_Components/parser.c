@@ -67,7 +67,7 @@
 
 
 /* First part of user prologue.  */
-#line 1 "parser.y"
+#line 1 "C_Components/parser.y"
 
 #include "ast.h"
 extern int yylex();
@@ -77,7 +77,7 @@ void yyerror(const char *s);
 // Declare the global variable as extern (defined in parser_globals.c)
 extern Node* parsed_expression;
 
-#line 81 "parser.c"
+#line 81 "C_Components/parser.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -1113,121 +1113,121 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* program: statement  */
-#line 41 "parser.y"
+#line 41 "C_Components/parser.y"
                            { parsed_expression = (yyvsp[0].node); }
-#line 1119 "parser.c"
+#line 1119 "C_Components/parser.c"
     break;
 
   case 3: /* program: program statement  */
-#line 42 "parser.y"
+#line 42 "C_Components/parser.y"
                            { parsed_expression = (yyvsp[0].node); }
-#line 1125 "parser.c"
+#line 1125 "C_Components/parser.c"
     break;
 
   case 4: /* statement: IDENTIFIER ASSIGN expr  */
-#line 46 "parser.y"
+#line 46 "C_Components/parser.y"
                                   { (yyval.node) = create_assignment_node((yyvsp[-2].str), (yyvsp[0].node)); }
-#line 1131 "parser.c"
+#line 1131 "C_Components/parser.c"
     break;
 
   case 5: /* statement: expr  */
-#line 47 "parser.y"
+#line 47 "C_Components/parser.y"
                                   { (yyval.node) = (yyvsp[0].node); }
-#line 1137 "parser.c"
+#line 1137 "C_Components/parser.c"
     break;
 
   case 6: /* expr: IDENTIFIER  */
-#line 51 "parser.y"
+#line 51 "C_Components/parser.y"
                                     { (yyval.node) = create_variable_node((yyvsp[0].str)); }
-#line 1143 "parser.c"
+#line 1143 "C_Components/parser.c"
     break;
 
   case 7: /* expr: T_TRUE  */
-#line 52 "parser.y"
-                                    { (yyval.node) = create_boolean_node(1); }
-#line 1149 "parser.c"
+#line 52 "C_Components/parser.y"
+                                    { (yyval.node) = create_boolean_node((yyvsp[0].bool_val)); }
+#line 1149 "C_Components/parser.c"
     break;
 
   case 8: /* expr: T_FALSE  */
-#line 53 "parser.y"
-                                    { (yyval.node) = create_boolean_node(0); }
-#line 1155 "parser.c"
+#line 53 "C_Components/parser.y"
+                                    { (yyval.node) = create_boolean_node((yyvsp[0].bool_val)); }
+#line 1155 "C_Components/parser.c"
     break;
 
   case 9: /* expr: NOT expr  */
-#line 54 "parser.y"
+#line 54 "C_Components/parser.y"
                                     { (yyval.node) = create_not_node((yyvsp[0].node)); }
-#line 1161 "parser.c"
+#line 1161 "C_Components/parser.c"
     break;
 
   case 10: /* expr: expr AND expr  */
-#line 55 "parser.y"
+#line 55 "C_Components/parser.y"
                                     { (yyval.node) = create_and_node((yyvsp[-2].node), (yyvsp[0].node)); }
-#line 1167 "parser.c"
+#line 1167 "C_Components/parser.c"
     break;
 
   case 11: /* expr: expr OR expr  */
-#line 56 "parser.y"
+#line 56 "C_Components/parser.y"
                                     { (yyval.node) = create_or_node((yyvsp[-2].node), (yyvsp[0].node)); }
-#line 1173 "parser.c"
+#line 1173 "C_Components/parser.c"
     break;
 
   case 12: /* expr: expr XOR expr  */
-#line 57 "parser.y"
+#line 57 "C_Components/parser.y"
                                     { (yyval.node) = create_xor_node((yyvsp[-2].node), (yyvsp[0].node)); }
-#line 1179 "parser.c"
+#line 1179 "C_Components/parser.c"
     break;
 
   case 13: /* expr: expr XNOR expr  */
-#line 58 "parser.y"
+#line 58 "C_Components/parser.y"
                                     { (yyval.node) = create_xnor_node((yyvsp[-2].node), (yyvsp[0].node)); }
-#line 1185 "parser.c"
+#line 1185 "C_Components/parser.c"
     break;
 
   case 14: /* expr: expr IMPLIES expr  */
-#line 59 "parser.y"
+#line 59 "C_Components/parser.y"
                                     { (yyval.node) = create_implies_node((yyvsp[-2].node), (yyvsp[0].node)); }
-#line 1191 "parser.c"
+#line 1191 "C_Components/parser.c"
     break;
 
   case 15: /* expr: expr IFF expr  */
-#line 60 "parser.y"
+#line 60 "C_Components/parser.y"
                                     { (yyval.node) = create_iff_node((yyvsp[-2].node), (yyvsp[0].node)); }
-#line 1197 "parser.c"
+#line 1197 "C_Components/parser.c"
     break;
 
   case 16: /* expr: expr EQUIV expr  */
-#line 61 "parser.y"
+#line 61 "C_Components/parser.y"
                                     { (yyval.node) = create_equiv_node((yyvsp[-2].node), (yyvsp[0].node)); }
-#line 1203 "parser.c"
+#line 1203 "C_Components/parser.c"
     break;
 
   case 17: /* expr: EXISTS IDENTIFIER LPAREN expr RPAREN  */
-#line 62 "parser.y"
+#line 62 "C_Components/parser.y"
                                                   { (yyval.node) = create_exists_node((yyvsp[-3].str), (yyvsp[-1].node)); }
-#line 1209 "parser.c"
+#line 1209 "C_Components/parser.c"
     break;
 
   case 18: /* expr: FORALL IDENTIFIER LPAREN expr RPAREN  */
-#line 63 "parser.y"
+#line 63 "C_Components/parser.y"
                                                   { (yyval.node) = create_forall_node((yyvsp[-3].str), (yyvsp[-1].node)); }
-#line 1215 "parser.c"
+#line 1215 "C_Components/parser.c"
     break;
 
   case 19: /* expr: LPAREN expr RPAREN  */
-#line 64 "parser.y"
+#line 64 "C_Components/parser.y"
                                     { (yyval.node) = (yyvsp[-1].node); }
-#line 1221 "parser.c"
+#line 1221 "C_Components/parser.c"
     break;
 
   case 20: /* expr: error  */
-#line 65 "parser.y"
+#line 65 "C_Components/parser.y"
             { yyerror("Syntax error: invalid expression"); YYABORT; }
-#line 1227 "parser.c"
+#line 1227 "C_Components/parser.c"
     break;
 
 
-#line 1231 "parser.c"
+#line 1231 "C_Components/parser.c"
 
       default: break;
     }
@@ -1420,5 +1420,5 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 68 "parser.y"
+#line 68 "C_Components/parser.y"
 

@@ -8,6 +8,8 @@ extern YYSTYPE yylval;
 
 %option noyywrap
 %option yylineno
+%option noinput nounput
+
 
 
 %%

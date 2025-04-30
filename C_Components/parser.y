@@ -49,8 +49,8 @@ statement:
 
 expr:
       IDENTIFIER                    { $$ = create_variable_node($1); }
-    | T_TRUE                        { $$ = create_boolean_node(1); }
-    | T_FALSE                       { $$ = create_boolean_node(0); }
+    | T_TRUE                        { $$ = create_boolean_node($1); }
+    | T_FALSE                       { $$ = create_boolean_node($1); }
     | NOT expr                      { $$ = create_not_node($2); }
     | expr AND expr                 { $$ = create_and_node($1, $3); }
     | expr OR expr                  { $$ = create_or_node($1, $3); }

@@ -6,7 +6,7 @@ ARFLAGS = rcs
 SRC_DIR = C_Components
 
 LEXER_L = $(SRC_DIR)/lexer.l
-PARSER_Y = ./parser.y
+PARSER_Y = $(SRC_DIR)/parser.y
 LEXER_C = $(SRC_DIR)/lexer.c
 PARSER_C = $(SRC_DIR)/parser.c
 PARSER_H = $(SRC_DIR)/parser.h
@@ -19,18 +19,13 @@ LIB = liblogic.a
 
 all: $(LIB)
 
-
 # Bison rule
 $(PARSER_C) $(PARSER_H): $(PARSER_Y)
 	bison -d -o $(PARSER_C) $(PARSER_Y)
-	mv parser.h $(SRC_DIR)/
-	mv parser.c $(SRC_DIR)/
 
-
-# Flex rule
-$(LEXER_C): $(LEXER_L)
-	cd $(SRC_DIR) && flex -o $(SRC_DIR)/lexer.c lexer.l
-
+# Flex rule — now depends on parser.h!
+$(LEXER_C): $(LEXER_L) $(PARSER_H)
+	cd $(SRC_DIR) && flex -o lexer.c lexer.l
 
 # Object files
 lexer.o: $(LEXER_C)
@@ -39,17 +34,20 @@ lexer.o: $(LEXER_C)
 parser.o: $(PARSER_C) $(PARSER_H)
 	$(CC) $(CFLAGS) -o $@ $<
 
-ast.o: $(AST_C)
+ast.o: $(AST_C) $(SRC_DIR)/ast.h
 	$(CC) $(CFLAGS) -o $@ $<
 
 parser_globals.o: $(PARSER_GLOBALS_C)
 	$(CC) $(CFLAGS) -o $@ $<
 
-# Library
+# Static library
 $(LIB): $(OBJS)
 	$(AR) $(ARFLAGS) $@ $(OBJS)
 
 clean:
 	rm -f $(OBJS) $(LEXER_C) $(PARSER_C) $(PARSER_H)
 
-.PHONY: all clean
+clean-everything: clean
+	rm -f $(LIB)
+
+.PHONY: all clean clean-everything
