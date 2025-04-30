@@ -13,9 +13,10 @@ LEXER_C = $(SRC_DIR)/lexer.c
 PARSER_C = $(SRC_DIR)/parser.c
 PARSER_H = $(SRC_DIR)/parser.h
 AST_C = $(SRC_DIR)/ast.c
-PARSER_GLOBALS_C = $(SRC_DIR)/parser_globals.c
+SYMBOL_TABLE_C = $(SRC_DIR)/symbol_table.c
+SYMBOL_TABLE_H = $(SRC_DIR)/symbol_table.h
 
-OBJS = lexer.o parser.o ast.o parser_globals.o
+OBJS = lexer.o parser.o ast.o  symbol_table.o
 
 LIB = liblogic.a
 
@@ -34,20 +35,24 @@ $(LEXER_C): $(LEXER_L) $(PARSER_H)
 
 # Object files
 lexer.o: $(LEXER_C)
-	$(CC) $(CFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) -o $@ $(LEXER_C)
 
 parser.o: $(PARSER_C) $(PARSER_H) $(SRC_DIR)/ast.h
-	$(CC) $(CFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) -o $@ $(PARSER_C)
 
-ast.o: $(AST_C) $(SRC_DIR)/ast.h
-	$(CC) $(CFLAGS) -o $@ $<
+ast.o: $(AST_C) $(SRC_DIR)/ast.h $(SYMBOL_TABLE_H)
+	$(CC) $(CFLAGS) -o $@ $(AST_C)
 
-parser_globals.o: $(PARSER_GLOBALS_C)
-	$(CC) $(CFLAGS) -o $@ $<
+
+
+symbol_table.o: $(SYMBOL_TABLE_C) $(SYMBOL_TABLE_H)
+	$(CC) $(CFLAGS) -o $@ $(SYMBOL_TABLE_C)
 
 # Static library
 $(LIB): $(OBJS)
 	$(AR) $(ARFLAGS) $@ $(OBJS)
+	@echo "Checking for symbol table functions in library:"
+	@nm $(LIB) | grep -E 'init_symbol_table|free_symbol_table|get_symbol_value|add_or_update_symbol'
 
 clean:
 	rm -f $(OBJS) $(LEXER_C) $(PARSER_C) $(PARSER_H) *.d

@@ -1,1 +1,13 @@
-Expression: A = True
+Starting evaluation of multiple expressions
+Evaluating expression: B = TRUE
+Assigned B = TRUE
+Result: TRUE
+Evaluating expression: C = FALSE
+Assigned C = FALSE
+Result: FALSE
+Evaluating expression: B OR C
+Substituted variable B with value TRUE
+Substituted variable C with value FALSE
+Evaluated OR operation
+Result: TRUE
+Completed evaluation of all expressions

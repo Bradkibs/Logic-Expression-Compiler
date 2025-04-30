@@ -1,96 +1,93 @@
 #ifndef AST_H
 #define AST_H
 
-#ifdef __cplusplus
-extern "C"
+#include <stdbool.h>
+#include "symbol_table.h"
+
+// Node types for AST
+typedef enum
 {
-#endif
-    typedef enum
-    {
-        NODE_VAR,
-        NODE_ASSIGN,
-        NODE_NOT,
-        NODE_AND,
-        NODE_OR,
-        NODE_XOR,
-        NODE_XNOR,
-        NODE_IMPLIES,
-        NODE_IFF,
-        NODE_EQUIV,
-        NODE_EXISTS,
-        NODE_FORALL,
-        NODE_BOOL
-    } NodeType;
+    NODE_VAR,
+    NODE_ASSIGN,
+    NODE_NOT,
+    NODE_AND,
+    NODE_OR,
+    NODE_XOR,
+    NODE_XNOR,
+    NODE_IMPLIES,
+    NODE_IFF,
+    NODE_EQUIV,
+    NODE_EXISTS,
+    NODE_FORALL,
+    NODE_BOOL
+} NodeType;
 
-    typedef struct Node
-    {
-        NodeType type;
-        char *name; // For variable or quantifier var
-        struct Node *left;
-        struct Node *right;
-        int bool_val;
-    } Node;
+// Add more specific error codes as needed
+// Structure for representing AST nodes
+typedef struct Node
+{
+    NodeType type;
+    char *name;
+    struct Node *left;
+    struct Node *right;
+    int bool_val; // Used for boolean literals and evaluated results
+} Node;
 
-// Global variable for parsed expression result
-#ifdef __cplusplus
-    extern "C"
-    {
-#endif
-        extern Node *parsed_expression;
-#ifdef __cplusplus
-    }
-#endif
-    // Constructors
-    Node *create_variable_node(char *name);
-    Node *create_assignment_node(char *name, Node *expr);
-    Node *create_not_node(Node *expr);
-    Node *create_and_node(Node *left, Node *right);
-    Node *create_or_node(Node *left, Node *right);
-    Node *create_xor_node(Node *left, Node *right);
-    Node *create_xnor_node(Node *left, Node *right);
-    Node *create_implies_node(Node *left, Node *right);
-    Node *create_iff_node(Node *left, Node *right);
-    Node *create_equiv_node(Node *left, Node *right);
-    Node *create_exists_node(char *var, Node *expr);
-    Node *create_forall_node(char *var, Node *expr);
+// Structure for recording evaluation steps
+typedef struct
+{
+    char *step_description;
+} EvaluationStep;
 
-    // Evaluation step structure for tracking logical evaluation
-    typedef struct
-    {
-        char *step_description;
-    } EvaluationStep;
+typedef struct
+{
+    EvaluationStep **steps;
+    int step_count;
+    int capacity;
+} EvaluationSteps;
 
-    // Structure to hold multiple evaluation steps
-    typedef struct
-    {
-        EvaluationStep **steps;
-        int step_count;
-        int capacity;
-    } EvaluationSteps;
+// Function declarations
+Node *create_node(NodeType type, char *name, Node *left, Node *right, int bool_val);
+Node *create_variable_node(char *name);
+Node *create_assignment_node(char *name, Node *expr);
+Node *create_not_node(Node *expr);
+Node *create_and_node(Node *l, Node *r);
+Node *create_or_node(Node *l, Node *r);
+Node *create_xor_node(Node *l, Node *r);
+Node *create_xnor_node(Node *l, Node *r);
+Node *create_implies_node(Node *l, Node *r);
+Node *create_iff_node(Node *l, Node *r);
+Node *create_equiv_node(Node *l, Node *r);
+Node *create_exists_node(char *var, Node *expr);
+Node *create_forall_node(char *var, Node *expr);
+Node *create_boolean_node(int value);
 
-    void print_ast(Node *root, int indent);
-    void free_ast(Node *root);
-    Node *clone_node(const Node *node); // Deep copy of AST
-    Node *apply_logical_laws(Node *root, EvaluationSteps *steps);
+void print_ast(Node *node, int indent);
+void free_ast(Node *node);
+Node *clone_node(const Node *node);
 
-    // FFI added declarations
-    int get_steps_count(EvaluationSteps *steps);
-    char *get_step_at(EvaluationSteps *steps, int index);
+// Evaluation steps
+EvaluationSteps *init_evaluation_steps();
+void add_evaluation_step(EvaluationSteps *steps, const char *description);
+void free_evaluation_steps(EvaluationSteps *steps);
 
-    // Initialize evaluation steps structure
-    extern EvaluationSteps *init_evaluation_steps();
+// Logical operations
+Node *apply_de_morgan(Node *node, EvaluationSteps *steps);
+Node *apply_commutative(Node *node, EvaluationSteps *steps);
+Node *apply_distributive(Node *node, EvaluationSteps *steps);
+Node *apply_implication(Node *node, EvaluationSteps *steps);
+Node *apply_iff(Node *node, EvaluationSteps *steps);
+Node *apply_logical_laws(Node *node, EvaluationSteps *steps);
 
-    // Add a step to the evaluation steps
-    extern void add_evaluation_step(EvaluationSteps *steps, const char *description);
+// Main evaluation function
+EvaluationSteps *evaluate_expression(const char *expression);
 
-    // Free evaluation steps memory
-    extern void free_evaluation_steps(EvaluationSteps *steps);
+// New functions for symbol table integration
+Node *evaluate_node_with_symbol_table(Node *node, SymbolTable *symbol_table, EvaluationSteps *steps);
+EvaluationSteps *evaluate_multiple_expressions(const char *expressions);
 
-    // Evaluate a logical expression and return the evaluation steps
-    extern EvaluationSteps *evaluate_expression(const char *expression);
+// FFI functions
+int get_steps_count(EvaluationSteps *steps);
+char *get_step_at(EvaluationSteps *steps, int index);
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+#endif /* AST_H */
