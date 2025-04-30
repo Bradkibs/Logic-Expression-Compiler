@@ -4,11 +4,11 @@
 
 - `Flex` -- Used for Lexical Analysis.
 - `Bison` -- Used for Parsing and building the AST.
-- `C & Rust` -- Language used for Semantic analysis.
+- `C & Golang` -- Language used for Semantic analysis.
 
 ## Steps used to build it
 
-- Installing the required tools; eg; flex, bison, rustc and cargo.
+- Installing the required tools; eg; flex, bison, rustc and go version 1.23+.
 - Compiling lexer.l and parser.y to C components(Manual approach).
 
 ```

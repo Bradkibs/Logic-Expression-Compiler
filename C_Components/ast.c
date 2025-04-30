@@ -73,20 +73,123 @@ void free_ast(Node *node)
     free(node);
 }
 
+// Deep copy of AST node
+Node *clone_node(Node *node)
+{
+    if (!node)
+        return NULL;
+
+    Node *left_copy = clone_node(node->left);
+    Node *right_copy = clone_node(node->right);
+    return create_node(node->type, node->name, left_copy, right_copy, node->bool_val);
+}
+
+// Logical Laws
+Node *apply_de_morgan(Node *node, EvaluationSteps *steps)
+{
+    if (!node || node->type != NODE_NOT)
+        return node;
+
+    if (node->left->type == NODE_AND || node->left->type == NODE_OR)
+    {
+        NodeType new_type = node->left->type == NODE_AND ? NODE_OR : NODE_AND;
+        Node *new_left = create_not_node(clone_node(node->left->left));
+        Node *new_right = create_not_node(clone_node(node->left->right));
+        Node *transformed = create_node(new_type, NULL, new_left, new_right, 0);
+        add_evaluation_step(steps, "Applied De Morgan's Law");
+        return transformed;
+    }
+    return node;
+}
+
+Node *apply_commutative(Node *node, EvaluationSteps *steps)
+{
+    if (!node)
+        return node;
+    if (node->type == NODE_AND || node->type == NODE_OR)
+    {
+        Node *temp = node->left;
+        node->left = node->right;
+        node->right = temp;
+        add_evaluation_step(steps, "Applied Commutative Law");
+    }
+    return node;
+}
+
+Node *apply_distributive(Node *node, EvaluationSteps *steps)
+{
+    if (!node || !node->left || !node->right)
+        return node;
+    if (node->type == NODE_AND && node->right->type == NODE_OR)
+    {
+        Node *a = node->left;
+        Node *b = node->right->left;
+        Node *c = node->right->right;
+        Node *left = create_and_node(clone_node(a), clone_node(b));
+        Node *right = create_and_node(clone_node(a), clone_node(c));
+        Node *transformed = create_or_node(left, right);
+        add_evaluation_step(steps, "Applied Distributive Law: AND over OR");
+        return transformed;
+    }
+    return node;
+}
+
+Node *apply_implication(Node *node, EvaluationSteps *steps)
+{
+    if (!node || node->type != NODE_IMPLIES)
+        return node;
+    Node *not_left = create_not_node(clone_node(node->left));
+    Node *transformed = create_or_node(not_left, clone_node(node->right));
+    add_evaluation_step(steps, "Applied Implication Law: A -> B == ~A OR B");
+    return transformed;
+}
+
+Node *apply_iff(Node *node, EvaluationSteps *steps)
+{
+    if (!node || node->type != NODE_IFF)
+        return node;
+    Node *left_impl = create_implies_node(clone_node(node->left), clone_node(node->right));
+    Node *right_impl = create_implies_node(clone_node(node->right), clone_node(node->left));
+    Node *transformed = create_and_node(left_impl, right_impl);
+    add_evaluation_step(steps, "Applied IFF Law: A <-> B == (A -> B) AND (B -> A)");
+    return transformed;
+}
+
+// Recursive logical law application
+Node *apply_logical_laws(Node *node, EvaluationSteps *steps)
+{
+    if (!node)
+        return NULL;
+
+    // Recurse first (post-order traversal)
+    node->left = apply_logical_laws(node->left, steps);
+    node->right = apply_logical_laws(node->right, steps);
+
+    switch (node->type)
+    {
+    case NODE_NOT:
+        return apply_de_morgan(node, steps);
+    case NODE_IMPLIES:
+        return apply_implication(node, steps);
+    case NODE_IFF:
+        return apply_iff(node, steps);
+    case NODE_AND:
+    case NODE_OR:
+        node = apply_commutative(node, steps);
+        node = apply_distributive(node, steps);
+        break;
+    default:
+        break;
+    }
+
+    return node;
+}
+
 // Evaluation step helpers
 EvaluationSteps *init_evaluation_steps()
 {
     EvaluationSteps *steps = malloc(sizeof(EvaluationSteps));
-    if (!steps)
-        return NULL;
-
     steps->steps = malloc(sizeof(EvaluationStep *) * 10);
-    if (!steps->steps)
-    {
-        free(steps);
-        return NULL;
-    }
-
     steps->step_count = 0;
     steps->capacity = 10;
     return steps;
@@ -94,36 +197,18 @@ EvaluationSteps *init_evaluation_steps()
 
 void add_evaluation_step(EvaluationSteps *steps, const char *description)
 {
-    if (!steps || !description)
-        return;
-
     if (steps->step_count >= steps->capacity)
     {
-        int new_capacity = steps->capacity * 2;
-        EvaluationStep **new_steps = realloc(steps->steps, sizeof(EvaluationStep *) * new_capacity);
-        if (!new_steps)
-            return;
-        steps->steps = new_steps;
-        steps->capacity = new_capacity;
+        steps->capacity *= 2;
+        steps->steps = realloc(steps->steps, sizeof(EvaluationStep *) * steps->capacity);
     }
-
     EvaluationStep *step = malloc(sizeof(EvaluationStep));
-    if (!step)
-        return;
     step->step_description = strdup(description);
-    if (!step->step_description)
-    {
-        free(step);
-        return;
-    }
-
     steps->steps[steps->step_count++] = step;
 }
 
 void free_evaluation_steps(EvaluationSteps *steps)
 {
-    if (!steps)
-        return;
     for (int i = 0; i < steps->step_count; i++)
     {
         free(steps->steps[i]->step_description);
@@ -131,18 +216,6 @@ void free_evaluation_steps(EvaluationSteps *steps)
     }
     free(steps->steps);
     free(steps);
-}
-
-// String parser wrapper
-static Node *parse_string(const char *input)
-{
-    yydebug = 1;
-    yy_scan_string(input);
-    parsed_expression = NULL;
-    int parse_result = yyparse();
-    if (parse_result != 0 || parsed_expression == NULL)
-        return NULL;
-    return parsed_expression;
 }
 
 // Node type to string
@@ -181,7 +254,7 @@ static const char *get_node_type_str(NodeType type)
     }
 }
 
-// Node evaluator
+// Evaluation recording
 static void evaluate_node_and_record(Node *node, EvaluationSteps *steps)
 {
     if (!node || !steps)
@@ -189,39 +262,29 @@ static void evaluate_node_and_record(Node *node, EvaluationSteps *steps)
 
     char description[256];
     if (node->type == NODE_BOOL)
-    {
         snprintf(description, sizeof(description), "Boolean literal: %s", node->bool_val ? "true" : "false");
-    }
     else if (node->name)
-    {
         snprintf(description, sizeof(description), "Processing %s: %s", get_node_type_str(node->type), node->name);
-    }
     else
-    {
         snprintf(description, sizeof(description), "Processing operator: %s", get_node_type_str(node->type));
-    }
 
     add_evaluation_step(steps, description);
-
     evaluate_node_and_record(node->left, steps);
     evaluate_node_and_record(node->right, steps);
 }
 
+// Expression entry point
 EvaluationSteps *evaluate_expression(const char *expression)
 {
     if (!expression)
         return NULL;
 
     EvaluationSteps *steps = init_evaluation_steps();
-    if (!steps)
-        return NULL;
-
     char description[256];
     snprintf(description, sizeof(description), "Evaluating expression: %s", expression);
     add_evaluation_step(steps, description);
 
     add_evaluation_step(steps, "Parsing expression...");
-
     Node *ast = parse_string(expression);
     if (!ast)
     {
@@ -231,9 +294,20 @@ EvaluationSteps *evaluate_expression(const char *expression)
 
     add_evaluation_step(steps, "Successfully parsed expression into AST");
 
+    ast = apply_logical_laws(ast, steps);
     evaluate_node_and_record(ast, steps);
     add_evaluation_step(steps, "Evaluation complete");
 
     free_ast(ast);
     return steps;
+}
+
+// Parse string wrapper
+static Node *parse_string(const char *input)
+{
+    yydebug = 1;
+    yy_scan_string(input);
+    parsed_expression = NULL;
+    int parse_result = yyparse();
+    return (parse_result == 0) ? parsed_expression : NULL;
 }

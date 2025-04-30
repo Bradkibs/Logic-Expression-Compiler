@@ -54,9 +54,6 @@ extern "C"
     Node *create_exists_node(char *var, Node *expr);
     Node *create_forall_node(char *var, Node *expr);
 
-    void print_ast(Node *root, int indent);
-    void free_ast(Node *root);
-
     // Evaluation step structure for tracking logical evaluation
     typedef struct
     {
@@ -70,6 +67,11 @@ extern "C"
         int step_count;
         int capacity;
     } EvaluationSteps;
+
+    void print_ast(Node *root, int indent);
+    void free_ast(Node *root);
+    Node *clone_node(const Node *node); // Deep copy of AST
+    Node *apply_logical_laws(Node *root, EvaluationSteps *steps);
 
     // Initialize evaluation steps structure
     extern EvaluationSteps *init_evaluation_steps();
