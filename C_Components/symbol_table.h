@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#define MAX_SYMBOLS 256
+#define MAX_SYMBOLS 2048
 #define SUCCESS 0
 #define ERROR_NULL_POINTER -1
 #define ERROR_MEMORY_ALLOCATION -2

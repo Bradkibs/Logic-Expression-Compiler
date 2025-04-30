@@ -397,7 +397,7 @@ Node *evaluate_node_with_symbol_table(Node *node, SymbolTable *symbol_table, Eva
     if (node->type == NODE_VAR)
     {
         bool value;
-        char desc[256];
+        char desc[2048];
         if (get_symbol_value(symbol_table, node->name, &value))
         {
             snprintf(desc, sizeof(desc), "Substituted variable %s with value %s",
@@ -419,7 +419,7 @@ Node *evaluate_node_with_symbol_table(Node *node, SymbolTable *symbol_table, Eva
     // Process assignments
     else if (node->type == NODE_ASSIGN)
     {
-        char desc[256];
+        char desc[2048];
         // Don't evaluate the right side of the assignment directly
         // Instead evaluate a copy to avoid potential double freeing
         Node *value_node = NULL;
@@ -673,7 +673,7 @@ EvaluationSteps *evaluate_multiple_expressions(const char *expressions)
         // Skip empty lines
         if (strlen(line) > 0)
         {
-            char desc[256];
+            char desc[2048];
             snprintf(desc, sizeof(desc), "Evaluating expression: %s", line);
             add_evaluation_step(steps, desc);
 
