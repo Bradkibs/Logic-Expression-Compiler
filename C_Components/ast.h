@@ -73,6 +73,10 @@ extern "C"
     Node *clone_node(const Node *node); // Deep copy of AST
     Node *apply_logical_laws(Node *root, EvaluationSteps *steps);
 
+    // FFI added declarations
+    int get_steps_count(EvaluationSteps *steps);
+    char *get_step_at(EvaluationSteps *steps, int index);
+
     // Initialize evaluation steps structure
     extern EvaluationSteps *init_evaluation_steps();
 

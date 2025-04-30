@@ -74,7 +74,7 @@ void free_ast(Node *node)
 }
 
 // Deep copy of AST node
-Node *clone_node(Node *node)
+Node *clone_node(const Node *node)
 {
     if (!node)
         return NULL;
@@ -273,6 +273,16 @@ static void evaluate_node_and_record(Node *node, EvaluationSteps *steps)
     evaluate_node_and_record(node->right, steps);
 }
 
+// Parse string wrapper
+static Node *parse_string(const char *input)
+{
+    yydebug = 1;
+    yy_scan_string(input);
+    parsed_expression = NULL;
+    int parse_result = yyparse();
+    return (parse_result == 0) ? parsed_expression : NULL;
+}
+
 // Expression entry point
 EvaluationSteps *evaluate_expression(const char *expression)
 {
@@ -302,12 +312,15 @@ EvaluationSteps *evaluate_expression(const char *expression)
     return steps;
 }
 
-// Parse string wrapper
-static Node *parse_string(const char *input)
+// FFI code
+int get_steps_count(EvaluationSteps *steps)
 {
-    yydebug = 1;
-    yy_scan_string(input);
-    parsed_expression = NULL;
-    int parse_result = yyparse();
-    return (parse_result == 0) ? parsed_expression : NULL;
+    return steps ? steps->step_count : 0;
+}
+
+char *get_step_at(EvaluationSteps *steps, int index)
+{
+    if (!steps || index < 0 || index >= steps->step_count)
+        return NULL;
+    return steps->steps[index]->step_description;
 }

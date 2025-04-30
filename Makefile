@@ -26,11 +26,11 @@ all: $(LIB)
 
 # Bison rule
 $(PARSER_C) $(PARSER_H): $(PARSER_Y)
-	cd $(SRC_DIR) && bison -d -o $(PARSER_C) $(PARSER_Y)
+	cd $(SRC_DIR) && bison -d -o parser.c parser.y
 
 # Flex rule — now depends on parser.h!
 $(LEXER_C): $(LEXER_L) $(PARSER_H)
-	cd $(SRC_DIR) && flex -o $(LEXER_C) $(LEXER_L)
+	cd $(SRC_DIR) && flex -o lexer.c lexer.l
 
 # Object files
 lexer.o: $(LEXER_C)
