@@ -80,7 +80,7 @@ make clean-everything
 
 1. flex i.e lexer.l
 2. bison i.e parser.y
-3. C i.e ast.c and ast.h
+3. C i.e ast.c and ast.h symbol_table.c and symbol_table.h
 
 #### compilation toolchain
 
