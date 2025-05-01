@@ -35,10 +35,14 @@ Result: TRUE
 Evaluating expression: A --> B
 Substituted variable A with value TRUE
 Substituted variable B with value FALSE
-Applied Implication Law: A -> B == ~A OR B
-Could not determine a boolean result for this expression
+Evaluated implication: A -> B is ~A OR B
+Result: FALSE
 Evaluating expression: B => NOT A
-Failed to parse expression
+Substituted variable B with value FALSE
+Substituted variable A with value TRUE
+Evaluated NOT operation
+Evaluated implication: A -> B is ~A OR B
+Result: TRUE
 Evaluating expression: B
 Substituted variable B with value FALSE
 Result: FALSE
@@ -52,24 +56,24 @@ Evaluating expression: A ==> NOT B
 Substituted variable A with value TRUE
 Substituted variable B with value FALSE
 Evaluated NOT operation
-Applied Implication Law: A -> B == ~A OR B
-Could not determine a boolean result for this expression
+Evaluated implication: A -> B is ~A OR B
+Result: TRUE
 Evaluating expression: A <==> B
 Substituted variable A with value TRUE
 Substituted variable B with value FALSE
-Applied IFF Law: A <-> B == (A -> B) AND (B -> A)
-Could not determine a boolean result for this expression
+Evaluated IFF: A <-> B is true when A and B have the same value
+Result: FALSE
 Evaluating expression: A DOUBLEIMPLIES B
 Substituted variable A with value TRUE
 Substituted variable B with value FALSE
-Applied IFF Law: A <-> B == (A -> B) AND (B -> A)
-Could not determine a boolean result for this expression
+Evaluated IFF: A <-> B is true when A and B have the same value
+Result: FALSE
 Evaluating expression: A IMPLIES NOT B
 Substituted variable A with value TRUE
 Substituted variable B with value FALSE
 Evaluated NOT operation
-Applied Implication Law: A -> B == ~A OR B
-Could not determine a boolean result for this expression
+Evaluated implication: A -> B is ~A OR B
+Result: TRUE
 Evaluating expression: A XOR B
 Substituted variable A with value TRUE
 Substituted variable B with value FALSE

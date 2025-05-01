@@ -194,6 +194,29 @@ Node *apply_implication(Node *node, EvaluationSteps *steps)
 {
     if (!node || node->type != NODE_IMPLIES)
         return node;
+
+    // Check if both operands are boolean constants - direct evaluation
+    if (node->left && node->right &&
+        node->left->type == NODE_BOOL && node->right->type == NODE_BOOL)
+    {
+        // A → B is equivalent to !A || B
+        int result = !node->left->bool_val || node->right->bool_val;
+        Node *result_node = create_boolean_node(result);
+        add_evaluation_step(steps, "Evaluated implication: A -> B is ~A OR B");
+
+        // Clean up original node
+        Node *old_left = node->left;
+        Node *old_right = node->right;
+        node->left = NULL;
+        node->right = NULL;
+        free_ast(node);
+        free_ast(old_left);
+        free_ast(old_right);
+
+        return result_node;
+    }
+
+    // If operands aren't both boolean constants, transform A -> B into ~A OR B
     Node *not_left = create_not_node(clone_node(node->left));
     Node *transformed = create_or_node(not_left, clone_node(node->right));
     add_evaluation_step(steps, "Applied Implication Law: A -> B == ~A OR B");
@@ -207,6 +230,7 @@ Node *apply_implication(Node *node, EvaluationSteps *steps)
     free_ast(old_left);
     free_ast(old_right);
 
+    // Return the transformed node for further evaluation
     return transformed;
 }
 
@@ -214,6 +238,29 @@ Node *apply_iff(Node *node, EvaluationSteps *steps)
 {
     if (!node || node->type != NODE_IFF)
         return node;
+
+    // Check if both operands are boolean constants - direct evaluation
+    if (node->left && node->right &&
+        node->left->type == NODE_BOOL && node->right->type == NODE_BOOL)
+    {
+        // A ↔ B is equivalent to A == B (same boolean value)
+        int result = (node->left->bool_val == node->right->bool_val);
+        Node *result_node = create_boolean_node(result);
+        add_evaluation_step(steps, "Evaluated IFF: A <-> B is true when A and B have the same value");
+
+        // Clean up original node
+        Node *old_left = node->left;
+        Node *old_right = node->right;
+        node->left = NULL;
+        node->right = NULL;
+        free_ast(node);
+        free_ast(old_left);
+        free_ast(old_right);
+
+        return result_node;
+    }
+
+    // If operands aren't both boolean constants, transform A <-> B into (A -> B) AND (B -> A)
     Node *left_impl = create_implies_node(clone_node(node->left), clone_node(node->right));
     Node *right_impl = create_implies_node(clone_node(node->right), clone_node(node->left));
     Node *transformed = create_and_node(left_impl, right_impl);
@@ -228,6 +275,7 @@ Node *apply_iff(Node *node, EvaluationSteps *steps)
     free_ast(old_left);
     free_ast(old_right);
 
+    // Return the transformed node for further evaluation
     return transformed;
 }
 

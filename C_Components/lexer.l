@@ -19,8 +19,8 @@ extern YYSTYPE yylval;
 "XOR"|"xor"                          return XOR;
 "XNOR"|"xnor"                        return XNOR;
 
-"->"|"-->"|"==>"|"IMPLIES"|"implies" return IMPLIES;
-"<->"|"<=>"|"<==>"|"DOUBLEIMPLIES"|"D_IMPLIES" return IFF;
+"->"|"-->"|"==>"|"=>"|"IMPLIES"|"implies" return IMPLIES;
+"<->"|"<=>"|"<-->"|"<==>"|"DOUBLEIMPLIES"|"D_IMPLIES" return IFF;
 
 "="|"EQUALS"|"equals"                                 return ASSIGN;
 "==="|"EQUIVALENT"|"equivalent"      return EQUIV;
