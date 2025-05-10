@@ -49,6 +49,7 @@ typedef struct
 // Function declarations
 Node *create_node(NodeType type, char *name, Node *left, Node *right, int bool_val);
 Node *create_variable_node(char *name);
+const char *get_node_type_str(NodeType type);
 Node *create_assignment_node(char *name, Node *expr);
 Node *create_not_node(Node *expr);
 Node *create_and_node(Node *l, Node *r);

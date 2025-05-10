@@ -3,29 +3,26 @@
 
 #include <stdbool.h>
 
-#define MAX_SYMBOLS 2048
-#define SUCCESS 0
-#define ERROR_NULL_POINTER -1
-#define ERROR_MEMORY_ALLOCATION -2
-#define ERROR_SYMBOL_TABLE_FULL -3
-#define ERROR_SYMBOL_NOT_FOUND -4
+#define MAX_SYMBOLS 100
+#define MAX_SYMBOL_NAME_LENGTH 50
+#define ERROR_SYMBOL_TABLE_FULL -1
+#define ERROR_SYMBOL_NOT_DEFINED -2
+#define ERROR_SYMBOL_NOT_FOUND -3
 
-typedef struct
-{
-    char *name;
-    bool value;
-    bool is_defined;
+typedef struct {
+    char name[MAX_SYMBOL_NAME_LENGTH];  // Fixed-length name to simplify memory management
+    int value;
 } Symbol;
 
-typedef struct
-{
-    Symbol symbols[MAX_SYMBOLS];
-    int count;
+typedef struct {
+    Symbol *symbols;  // Dynamic array of symbols
+    int size;         // Current number of symbols
+    int capacity;     // Total allocated capacity
 } SymbolTable;
 
 SymbolTable *init_symbol_table();
-void add_or_update_symbol(SymbolTable *table, const char *name, bool value);
-bool get_symbol_value(SymbolTable *table, const char *name, bool *value);
+int add_or_update_symbol(SymbolTable *table, const char *name, int value);
+int get_symbol_value(SymbolTable *table, const char *name);
 void free_symbol_table(SymbolTable *table);
 
 #endif /* SYMBOL_TABLE_H */

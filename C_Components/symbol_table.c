@@ -1,78 +1,105 @@
+#include "symbol_table.h"
 #include <stdlib.h>
 #include <string.h>
-#include "symbol_table.h"
+
+#define INITIAL_CAPACITY 10
 
 SymbolTable *init_symbol_table()
 {
+    // Allocate memory for symbol table
     SymbolTable *table = malloc(sizeof(SymbolTable));
-    if (table == NULL)
-    {
-
-        return;
+    if (table == NULL) {
+        // Handle memory allocation failure
+        return NULL;
     }
-    table->count = 0;
+
+    // Initialize table properties with an initial capacity
+    table->capacity = INITIAL_CAPACITY;
+    table->size = 0;
+    table->symbols = malloc(table->capacity * sizeof(Symbol));
+    
+    if (table->symbols == NULL) {
+        free(table);
+        return NULL;
+    }
+
     return table;
 }
 
-void add_or_update_symbol(SymbolTable *table, const char *name, bool value)
+int add_or_update_symbol(SymbolTable *table, const char *name, int value)
 {
-    if (table == NULL)
-    {
-
-        return;
+    if (!table || !name) {
+        return ERROR_SYMBOL_NOT_DEFINED;
     }
-    // First, check if the symbol already exists
-    for (int i = 0; i < table->count; i++)
+    
+    // Check if table->symbols exists
+    if (!table->symbols) {
+        table->capacity = INITIAL_CAPACITY;
+        table->symbols = malloc(table->capacity * sizeof(Symbol));
+        if (!table->symbols) {
+            return ERROR_SYMBOL_TABLE_FULL;
+        }
+        table->size = 0;
+    }
+    
+    // Check if symbol already exists
+    for (int i = 0; i < table->size; i++)
     {
         if (strcmp(table->symbols[i].name, name) == 0)
         {
             table->symbols[i].value = value;
-            table->symbols[i].is_defined = true;
-            return;
+            return 0; // Success
         }
     }
 
-    if (table->count < MAX_SYMBOLS)
-    {
-        table->symbols[table->count].name = strdup(name);
-        table->symbols[table->count].value = value;
-        table->symbols[table->count].is_defined = true;
-        table->count++;
+    // Resize if needed
+    if (table->size >= table->capacity) {
+        int new_capacity = table->capacity * 2;
+        Symbol *new_symbols = realloc(table->symbols, new_capacity * sizeof(Symbol));
+        if (!new_symbols) {
+            return ERROR_SYMBOL_TABLE_FULL;
+        }
+        table->symbols = new_symbols;
+        table->capacity = new_capacity;
     }
+
+    // Add new symbol
+    strncpy(table->symbols[table->size].name, name, MAX_SYMBOL_NAME_LENGTH - 1);
+    table->symbols[table->size].name[MAX_SYMBOL_NAME_LENGTH - 1] = '\0';
+    table->symbols[table->size].value = value;
+    table->size++;
+
+    return 0; // Success
 }
 
-bool get_symbol_value(SymbolTable *table, const char *name, bool *value)
+int get_symbol_value(SymbolTable *table, const char *name)
 {
-    if (table == NULL)
-    {
-
-        return false;
+    if (!table || !table->symbols || !name) {
+        return ERROR_SYMBOL_NOT_FOUND;
     }
-    for (int i = 0; i < table->count; i++)
+    
+    // Handle special case for TRUE/FALSE constants
+    if (strcmp(name, "TRUE") == 0) {
+        return 1;
+    } else if (strcmp(name, "FALSE") == 0) {
+        return 0;
+    }
+    
+    for (int i = 0; i < table->size; i++)
     {
         if (strcmp(table->symbols[i].name, name) == 0)
         {
-            if (table->symbols[i].is_defined)
-            {
-                *value = table->symbols[i].value;
-                return true;
-            }
-            return false;
+            return table->symbols[i].value;
         }
     }
-    return false; // Symbol not found
+
+    return ERROR_SYMBOL_NOT_FOUND;
 }
 
 void free_symbol_table(SymbolTable *table)
 {
-    if (table == NULL)
-    {
-
-        return;
+    if (table) {
+        free(table->symbols);
+        free(table);
     }
-    for (int i = 0; i < table->count; i++)
-    {
-        free(table->symbols[i].name);
-    }
-    free(table);
 }
