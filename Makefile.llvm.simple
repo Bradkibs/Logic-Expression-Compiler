@@ -1,9 +1,11 @@
 CC = gcc
 CFLAGS = -c -g -Wall -I./C_Components -MMD -MP
+LLVM_CFLAGS = $(shell llvm-config --cflags)
+LLVM_LDFLAGS = $(shell llvm-config --ldflags)
+LLVM_LIBS = $(shell llvm-config --libs core analysis bitwriter)
 AR = ar
 ARFLAGS = rcs
 SHELL := /bin/bash
-
 
 SRC_DIR = C_Components
 
@@ -16,28 +18,25 @@ AST_C = $(SRC_DIR)/ast.c
 SYMBOL_TABLE_C = $(SRC_DIR)/symbol_table.c
 SYMBOL_TABLE_H = $(SRC_DIR)/symbol_table.h
 SEMANTIC_ANALYZER_C = $(SRC_DIR)/semantic_analyzer.c
-INTERMEDIATE_CODE_GEN_C = $(SRC_DIR)/intermediate_code_gen.c
-ASSEMBLY_GEN_C = $(SRC_DIR)/assembly_gen.c
+LLVM_CODEGEN_C = $(SRC_DIR)/llvm_codegen_simple.c
 
-OBJS = lexer.o parser.o ast.o symbol_table.o semantic_analyzer.o intermediate_code_gen.o assembly_gen.o
+OBJS = lexer.o parser.o ast.o symbol_table.o semantic_analyzer.o llvm_codegen.o
 
-
-LIB = liblogic.a
+LIB = liblogic_llvm_simple.a
 
 # Define main targets
-.PHONY: all clean clean-everything frontend check-deps
+.PHONY: all clean check-deps
 
 # Main build target with all executables
-all: $(LIB) lec_compiler Lec
+all: check-deps $(LIB) lec_compiler_llvm
 
 -include $(OBJS:.o=.d)
-
 
 # Bison rule
 $(PARSER_C) $(PARSER_H): $(PARSER_Y)
 	cd $(SRC_DIR) && bison -d -o parser.c parser.y
 
-# Flex rule — now depends on parser.h!
+# Flex rule — depends on parser.h
 $(LEXER_C): $(LEXER_L) $(PARSER_H)
 	cd $(SRC_DIR) && flex -o lexer.c lexer.l
 
@@ -51,42 +50,29 @@ parser.o: $(PARSER_C) $(PARSER_H) $(SRC_DIR)/ast.h
 ast.o: $(AST_C) $(SRC_DIR)/ast.h $(SYMBOL_TABLE_H)
 	$(CC) $(CFLAGS) -o $@ $(AST_C)
 
-
 symbol_table.o: $(SYMBOL_TABLE_C) $(SYMBOL_TABLE_H)
 	$(CC) $(CFLAGS) -o $@ $(SYMBOL_TABLE_C)
 
 semantic_analyzer.o: $(SEMANTIC_ANALYZER_C) $(SRC_DIR)/semantic_analyzer.h
 	$(CC) $(CFLAGS) -o $@ $(SEMANTIC_ANALYZER_C)
 
-intermediate_code_gen.o: $(INTERMEDIATE_CODE_GEN_C) $(SRC_DIR)/intermediate_code_gen.h
-	$(CC) $(CFLAGS) -o $@ $(INTERMEDIATE_CODE_GEN_C)
-
-assembly_gen.o: $(ASSEMBLY_GEN_C) $(SRC_DIR)/assembly_gen.h
-	$(CC) $(CFLAGS) -o $@ $(ASSEMBLY_GEN_C)
+llvm_codegen.o: $(LLVM_CODEGEN_C) $(SRC_DIR)/llvm_codegen.h
+	$(CC) $(CFLAGS) $(LLVM_CFLAGS) -o $@ $(LLVM_CODEGEN_C)
 
 # Static library
 $(LIB): $(OBJS)
 	$(AR) $(ARFLAGS) $@ $(OBJS)
-	@echo "Checking for symbol table functions in library:"
-	@nm $(LIB) | grep -E 'init_symbol_table|free_symbol_table|get_symbol_value|add_or_update_symbol'
 
 clean:
-	rm -f $(OBJS) $(LEXER_C) $(PARSER_C) $(PARSER_H) *.d *.o Lec lec_compiler
-
-clean-everything: clean
-	rm -f $(LIB)
+	rm -f $(OBJS) *.d *.o $(LIB) lec_compiler_llvm *.bc output
 
 # Check dependencies
 check-deps:
-	@if ! command -v nasm > /dev/null || ! command -v bison > /dev/null || ! command -v flex > /dev/null; then \
+	@if ! command -v llvm-config > /dev/null || ! command -v clang > /dev/null || ! command -v bison > /dev/null || ! command -v flex > /dev/null; then \
 		echo "Required dependencies missing. Running install script..."; \
 		./install.sh; \
 	fi
 
-# Logical Expression Compiler executable
-lec_compiler: lec_compiler.c $(LIB)
-	$(CC) -g -Wall -o lec_compiler lec_compiler.c -I. -L. -llogic -lm
-
-# Lec executable - now just a symbolic link to lec_compiler
-Lec: lec_compiler
-	ln -sf lec_compiler Lec
+# LLVM Logical Expression Compiler executable
+lec_compiler_llvm: lec_compiler_llvm.c $(LIB)
+	$(CC) -g -Wall -o lec_compiler_llvm lec_compiler_llvm.c -I. -L. -llogic_llvm_simple -lm $(LLVM_CFLAGS) $(LLVM_LDFLAGS) $(LLVM_LIBS)

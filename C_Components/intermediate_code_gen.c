@@ -24,6 +24,71 @@ IntermediateCode* generate_three_address_code(Node* ast) {
         case NODE_VAR:
             result = strdup(ast->name);
             break;
+            
+        case NODE_BOOL:
+            // Handle boolean literals
+            result = strdup(ast->bool_val ? "TRUE" : "FALSE");
+            break;
+            
+        case NODE_ASSIGN: {
+            // Handle assignment nodes (A = TRUE, etc.)
+            if (!ast->name || !ast->right) {
+                fprintf(stderr, "Error: Invalid assignment node\n");
+                free(result);
+                free(code->instructions);
+                free(code);
+                return NULL;
+            }
+            
+            // Generate code for the right side of the assignment
+            IntermediateCode* right_code = generate_three_address_code(ast->right);
+            if (!right_code || right_code->count == 0) {
+                // Handle special case for variables and boolean literals on the right
+                if (ast->right->type == NODE_VAR || ast->right->type == NODE_BOOL) {
+                    right_code = malloc(sizeof(IntermediateCode));
+                    right_code->instructions = malloc(sizeof(TACInstruction*));
+                    right_code->count = 1;
+                    right_code->capacity = 1;
+                    
+                    TACInstruction* var_instr = malloc(sizeof(TACInstruction));
+                    var_instr->op = TAC_ASSIGN;
+                    
+                    if (ast->right->type == NODE_VAR) {
+                        var_instr->result = strdup(ast->right->name);
+                        var_instr->arg1 = strdup(ast->right->name);
+                    } else { // NODE_BOOL
+                        var_instr->result = strdup(ast->right->bool_val ? "TRUE" : "FALSE");
+                        var_instr->arg1 = strdup(ast->right->bool_val ? "TRUE" : "FALSE");
+                    }
+                    
+                    var_instr->arg2 = NULL;
+                    right_code->instructions[0] = var_instr;
+                } else {
+                    fprintf(stderr, "Error: Failed to generate right operand code for assignment\n");
+                    free(result);
+                    free(code->instructions);
+                    free(code);
+                    return NULL;
+                }
+            }
+            
+            // Create the assignment instruction
+            TACInstruction* instr = malloc(sizeof(TACInstruction));
+            instr->op = TAC_ASSIGN;
+            instr->result = strdup(ast->name); // The variable being assigned to
+            instr->arg1 = strdup(right_code->instructions[0]->result); // The value to assign
+            instr->arg2 = NULL; // Assignments are binary operations
+            code->instructions[code->count++] = instr;
+            
+            // Return the result of the assignment (the variable name)
+            result = strdup(ast->name);
+            
+            // Clean up
+            free(right_code->instructions[0]);
+            free(right_code->instructions);
+            free(right_code);
+            break;
+        }
 
         case NODE_NOT: {
             char* arg = generate_three_address_code(ast->left)->instructions[0]->result;

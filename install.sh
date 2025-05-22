@@ -57,8 +57,7 @@ install_macos_deps() {
     brew install \
         flex \
         bison \
-        nasm \
-        go
+        nasm
     echo "Dependencies installed successfully for macOS."
 }
 
@@ -80,7 +79,6 @@ case "$OS" in
         echo "  - bison"
         echo "  - gcc"
         echo "  - nasm"
-        echo "  - golang"
         exit 1
         ;;
 esac

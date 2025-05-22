@@ -189,19 +189,37 @@ int main(int argc, char* argv[]) {
             if (asm_file) {
                 // Data section with all variables and strings
                 fprintf(asm_file, "section .data\n");
-                fprintf(asm_file, "    true db 'true', 0\n");
-                fprintf(asm_file, "    false db 'false', 0\n");
-                fprintf(asm_file, "    newline db 10\n");  // Add newline character
+                fprintf(asm_file, "    true_str db \"TRUE\", 0\n");
+                fprintf(asm_file, "    false_str db \"FALSE\", 0\n");
+                fprintf(asm_file, "    equals_str db \" = \", 0\n");
+                fprintf(asm_file, "    newline db 10, 0\n");
+                fprintf(asm_file, "    var_values_str db \"Variable values:\", 10, 0\n");
+                fprintf(asm_file, "    result_text db \"Result: \", 0\n");
+                fprintf(asm_file, "    completion_text db 10, \"Completed evaluation of all expressions\", 10, 0\n");
+                fprintf(asm_file, "    output_filename db \"output.txt\", 0\n");
                 fprintf(asm_file, "    result_header db \"Logical Expression Results:\", 10, 0\n");
+                fprintf(asm_file, "    evaluation_header db \"========== Logical Expression Evaluation ==========\n\", 0\n");
+                fprintf(asm_file, "    variables_header db \"Variables:\n\", 0\n");
+                fprintf(asm_file, "    expression_header db \"Expression:\n\", 0\n");
                 
-                // Define variables for our logical expressions
-                fprintf(asm_file, "    A resd 1  ; Variable A from logical expressions\n");
-                fprintf(asm_file, "    B resd 1  ; Variable B from logical expressions\n");
-                fprintf(asm_file, "    C resd 1  ; Variable C from logical expressions\n");
+                // Define variables from the symbol table - supports any variable names dynamically
+                fprintf(asm_file, "    ; Variables from the symbol table\n");
+                for (int i = 0; i < symbol_table->size; i++) {
+                    // Skip TRUE and FALSE constants
+                    if (strcmp(symbol_table->symbols[i].name, "TRUE") != 0 && 
+                        strcmp(symbol_table->symbols[i].name, "FALSE") != 0) {
+                        fprintf(asm_file, "    %s resd 1  ; Variable from logical expressions\n", 
+                                symbol_table->symbols[i].name);
+                    }
+                }
+                
+                // Temporary variables and buffers
+                fprintf(asm_file, "    ; Temporary variables for evaluations\n");
                 fprintf(asm_file, "    t0 resd 1  ; Temporary variable for evaluations\n");
                 fprintf(asm_file, "    t1 resd 1  ; Temporary variable for evaluations\n");
                 fprintf(asm_file, "    t2 resd 1  ; Temporary variable for evaluations\n");
-                fprintf(asm_file, "    result_buffer resb 128  ; Buffer for result string\n");
+                fprintf(asm_file, "    result_buffer resb 256  ; Buffer for result string\n");
+                fprintf(asm_file, "    var_buffer resb 64    ; Buffer for variable names\n");
                 
                 // Generate output strings for each evaluation step in the data section
                 for (int i = 0; i < eval_steps->step_count; i++) {
@@ -214,12 +232,58 @@ int main(int argc, char* argv[]) {
                 fprintf(asm_file, "\nsection .text\n");
                 fprintf(asm_file, "    global _start\n\n");
                 
+                // Add string function definitions
+                fprintf(asm_file, "; String length function\n");
+                fprintf(asm_file, "strlen:\n");
+                fprintf(asm_file, "    push rbx\n");
+                fprintf(asm_file, "    mov rbx, rdi\n");
+                fprintf(asm_file, "    xor rax, rax\n");
+                fprintf(asm_file, ".strlen_loop:\n");
+                fprintf(asm_file, "    cmp byte [rbx], 0\n");
+                fprintf(asm_file, "    je .strlen_end\n");
+                fprintf(asm_file, "    inc rax\n");
+                fprintf(asm_file, "    inc rbx\n");
+                fprintf(asm_file, "    jmp .strlen_loop\n");
+                fprintf(asm_file, ".strlen_end:\n");
+                fprintf(asm_file, "    pop rbx\n");
+                fprintf(asm_file, "    ret\n\n");
+                
+                fprintf(asm_file, "; String copy function\n");
+                fprintf(asm_file, "strcpy:\n");
+                fprintf(asm_file, "    push rdi\n");
+                fprintf(asm_file, "    push rsi\n");
+                fprintf(asm_file, "    push rdx\n");
+                fprintf(asm_file, ".strcpy_loop:\n");
+                fprintf(asm_file, "    mov dl, [rsi]\n");
+                fprintf(asm_file, "    mov [rdi], dl\n");
+                fprintf(asm_file, "    cmp dl, 0\n");
+                fprintf(asm_file, "    je .strcpy_end\n");
+                fprintf(asm_file, "    inc rdi\n");
+                fprintf(asm_file, "    inc rsi\n");
+                fprintf(asm_file, "    jmp .strcpy_loop\n");
+                fprintf(asm_file, ".strcpy_end:\n");
+                fprintf(asm_file, "    pop rdx\n");
+                fprintf(asm_file, "    pop rsi\n");
+                fprintf(asm_file, "    pop rdi\n");
+                fprintf(asm_file, "    ret\n\n");
+                
                 fprintf(asm_file, "_start:\n");
-                // Initialize symbol table with TRUE/FALSE values
-                fprintf(asm_file, "    ; Initialize symbol table\n");
-                fprintf(asm_file, "    mov DWORD [A], 1    ; A = TRUE\n");
-                fprintf(asm_file, "    mov DWORD [B], 0    ; B = FALSE\n");
-                fprintf(asm_file, "    mov DWORD [C], 0    ; C = FALSE\n\n");
+                // Initialize variables with values from the symbol table
+                fprintf(asm_file, "    ; Initialize variables with their assigned values\n");
+                
+                // Dynamically initialize all variables from the symbol table
+                for (int i = 0; i < symbol_table->size; i++) {
+                    // Skip TRUE and FALSE constants
+                    if (strcmp(symbol_table->symbols[i].name, "TRUE") != 0 && 
+                        strcmp(symbol_table->symbols[i].name, "FALSE") != 0) {
+                        fprintf(asm_file, "    mov DWORD [%s], %d    ; %s = %s\n", 
+                                symbol_table->symbols[i].name,
+                                symbol_table->symbols[i].value,
+                                symbol_table->symbols[i].name,
+                                symbol_table->symbols[i].value ? "TRUE" : "FALSE");
+                    }
+                }
+                fprintf(asm_file, "\n");
                 
                 // Generate the original TAC code first
                 for (int i = 0; i < tac_code->count; i++) {
@@ -433,6 +497,147 @@ int main(int argc, char* argv[]) {
                 fprintf(asm_file, "    mov rdx, 128     ; max buffer size\n");
                 fprintf(asm_file, "    syscall\n");
                 
+                // Generate output.txt file
+                fprintf(asm_file, "    ; Create/Open output.txt file\n");
+                fprintf(asm_file, "    mov rax, 2          ; syscall: open\n");
+                fprintf(asm_file, "    mov rdi, output_filename ; filename pointer\n");
+                fprintf(asm_file, "    mov rsi, 65         ; O_WRONLY | O_CREAT\n");
+                fprintf(asm_file, "    mov rdx, 0666o      ; permissions\n");
+                fprintf(asm_file, "    syscall\n");
+                fprintf(asm_file, "    mov r12, rax        ; save file descriptor\n\n");
+                
+                fprintf(asm_file, "    ; Write evaluation header\n");
+                fprintf(asm_file, "    mov rax, 1          ; syscall: write\n");
+                fprintf(asm_file, "    mov rdi, r12        ; file descriptor\n");
+                fprintf(asm_file, "    mov rsi, evaluation_header\n");
+                fprintf(asm_file, "    mov rdx, 51         ; length of header\n");
+                fprintf(asm_file, "    syscall\n\n");
+                
+                fprintf(asm_file, "    ; Write variables section\n");
+                fprintf(asm_file, "    mov rax, 1          ; syscall: write\n");
+                fprintf(asm_file, "    mov rdi, r12        ; file descriptor\n");
+                fprintf(asm_file, "    mov rsi, variables_header\n");
+                fprintf(asm_file, "    mov rdx, 11         ; length of header\n");
+                fprintf(asm_file, "    syscall\n\n");
+                
+                // For each variable in the symbol table, create assembly code to write it to output.txt
+                for (int i = 0; i < symbol_table->size; i++) {
+                    // Skip TRUE and FALSE constants
+                    if (strcmp(symbol_table->symbols[i].name, "TRUE") != 0 && 
+                        strcmp(symbol_table->symbols[i].name, "FALSE") != 0) {
+                        
+                        // Create unique labels for this variable
+                        char true_label[50], false_label[50];
+                        sprintf(true_label, ".var_%d_true", i);
+                        sprintf(false_label, ".var_%d_done", i);
+                        
+                        // Write code to format "X = TRUE/FALSE" in the buffer
+                        fprintf(asm_file, "    ; Write variable %s to output.txt\n", symbol_table->symbols[i].name);
+                        fprintf(asm_file, "    mov rsi, result_buffer\n");
+                        
+                        // Write the variable name first
+                        fprintf(asm_file, "    mov rdi, var_buffer\n");
+                        
+                        // Write the variable name character by character
+                        for (size_t j = 0; j < strlen(symbol_table->symbols[i].name); j++) {
+                            fprintf(asm_file, "    mov BYTE [rdi + %zu], '%c'\n", j, symbol_table->symbols[i].name[j]);
+                        }
+                        fprintf(asm_file, "    mov BYTE [rdi + %zu], 0\n", strlen(symbol_table->symbols[i].name)); // Null terminator
+                        
+                        // Copy the variable name to the buffer
+                        fprintf(asm_file, "    mov rsi, result_buffer\n");
+                        fprintf(asm_file, "    mov rdi, var_buffer\n");
+                        fprintf(asm_file, "    call strcpy\n");
+                        
+                        // Calculate the end of the string
+                        fprintf(asm_file, "    mov rsi, result_buffer\n");
+                        fprintf(asm_file, "    mov rdi, rsi\n");
+                        fprintf(asm_file, "    call strlen\n");
+                        fprintf(asm_file, "    add rsi, rax\n"); // rsi now points to end of string
+                        
+                        // Append " = "
+                        fprintf(asm_file, "    mov DWORD [rsi], ' = '\n");
+                        fprintf(asm_file, "    add rsi, 3\n");
+                        
+                        // Append TRUE/FALSE based on variable value
+                        fprintf(asm_file, "    cmp DWORD [%s], 1\n", symbol_table->symbols[i].name);
+                        fprintf(asm_file, "    jne %s\n", true_label);
+                        fprintf(asm_file, "    mov DWORD [rsi], 'TRUE'\n");
+                        fprintf(asm_file, "    add rsi, 4\n");
+                        fprintf(asm_file, "    jmp %s\n", false_label);
+                        fprintf(asm_file, "%s:\n", true_label);
+                        fprintf(asm_file, "    mov DWORD [rsi], 'FALS'\n");
+                        fprintf(asm_file, "    add rsi, 4\n");
+                        fprintf(asm_file, "    mov BYTE [rsi], 'E'\n");
+                        fprintf(asm_file, "    inc rsi\n");
+                        fprintf(asm_file, "%s:\n", false_label);
+                        
+                        // Add newline and null terminator
+                        fprintf(asm_file, "    mov BYTE [rsi], 10\n"); // newline
+                        fprintf(asm_file, "    inc rsi\n");
+                        fprintf(asm_file, "    mov BYTE [rsi], 0\n"); // null terminator
+                        
+                        // Write buffer to the file
+                        fprintf(asm_file, "    mov rax, 1          ; syscall: write\n");
+                        fprintf(asm_file, "    mov rdi, r12        ; file descriptor\n");
+                        fprintf(asm_file, "    mov rsi, result_buffer\n");
+                        fprintf(asm_file, "    mov rdx, 256        ; max buffer size\n");
+                        fprintf(asm_file, "    syscall\n\n");
+                    }
+                }
+                
+                // Write expression result to output.txt
+                fprintf(asm_file, "    ; Write expression section\n");
+                fprintf(asm_file, "    mov rax, 1          ; syscall: write\n");
+                fprintf(asm_file, "    mov rdi, r12        ; file descriptor\n");
+                fprintf(asm_file, "    mov rsi, expression_header\n");
+                fprintf(asm_file, "    mov rdx, 13         ; length of header\n");
+                fprintf(asm_file, "    syscall\n\n");
+                
+                // Format result buffer with the result of the expression
+                fprintf(asm_file, "    mov rsi, result_buffer\n");
+                fprintf(asm_file, "    mov DWORD [rsi], \"Resu\"\n");
+                fprintf(asm_file, "    add rsi, 4\n");
+                fprintf(asm_file, "    mov DWORD [rsi], \"lt: \"\n");
+                fprintf(asm_file, "    add rsi, 4\n");
+                
+                // Add TRUE/FALSE based on result
+                fprintf(asm_file, "    cmp DWORD [t0], 1\n");
+                fprintf(asm_file, "    je .result_true_txt\n");
+                fprintf(asm_file, "    mov DWORD [rsi], 'FALS'\n");
+                fprintf(asm_file, "    add rsi, 4\n");
+                fprintf(asm_file, "    mov BYTE [rsi], 'E'\n");
+                fprintf(asm_file, "    inc rsi\n");
+                fprintf(asm_file, "    jmp .result_done_txt\n");
+                fprintf(asm_file, ".result_true_txt:\n");
+                fprintf(asm_file, "    mov DWORD [rsi], 'TRUE'\n");
+                fprintf(asm_file, "    add rsi, 4\n");
+                fprintf(asm_file, ".result_done_txt:\n");
+                
+                // Add newline and null terminator
+                fprintf(asm_file, "    mov BYTE [rsi], 10\n"); // newline
+                fprintf(asm_file, "    inc rsi\n");
+                fprintf(asm_file, "    mov BYTE [rsi], 0\n"); // null terminator
+                
+                // Write result to file
+                fprintf(asm_file, "    mov rax, 1          ; syscall: write\n");
+                fprintf(asm_file, "    mov rdi, r12        ; file descriptor\n");
+                fprintf(asm_file, "    mov rsi, result_buffer\n");
+                fprintf(asm_file, "    mov rdx, 256        ; max buffer size\n");
+                fprintf(asm_file, "    syscall\n\n");
+                
+                // Write completion message
+                fprintf(asm_file, "    mov rax, 1          ; syscall: write\n");
+                fprintf(asm_file, "    mov rdi, r12        ; file descriptor\n");
+                fprintf(asm_file, "    mov rsi, completion_text\n");
+                fprintf(asm_file, "    mov rdx, 44         ; length\n");
+                fprintf(asm_file, "    syscall\n\n");
+                
+                // Close the file
+                fprintf(asm_file, "    mov rax, 3          ; syscall: close\n");
+                fprintf(asm_file, "    mov rdi, r12        ; file descriptor\n");
+                fprintf(asm_file, "    syscall\n\n");
+                
                 // Program exit - MUST BE LAST
                 fprintf(asm_file, "    ; Exit program\n");
                 fprintf(asm_file, "    mov rax, 60     ; syscall number for exit\n");
@@ -454,6 +659,14 @@ int main(int argc, char* argv[]) {
     char nasm_cmd[300];
     char ld_cmd[300];
     
+    // Generate custom executable name based on input filename
+    char executable_name[256] = {0};
+    strcpy(executable_name, input_file);
+    char* dot = strrchr(executable_name, '.');
+    if (dot) {
+        *dot = '\0';  // Remove the extension
+    }
+    
     // Generate object file from assembly
     snprintf(nasm_cmd, sizeof(nasm_cmd), "nasm -f elf64 -o output.o %s", output_asm);
     int nasm_result = system(nasm_cmd);
@@ -465,8 +678,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     
-    // Link object file to create executable
-    snprintf(ld_cmd, sizeof(ld_cmd), "ld -o lec_output output.o -e _start");
+    // Link object file to create executable with the same name as the input file (without extension)
+    snprintf(ld_cmd, sizeof(ld_cmd), "ld -o %s output.o -e _start", executable_name);
     int ld_result = system(ld_cmd);
     if (ld_result != 0) {
         fprintf(stderr, "Error: Linking failed\n");

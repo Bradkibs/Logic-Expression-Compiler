@@ -3,6 +3,26 @@
 #include "semantic_analyzer.h"
 #include "symbol_table.h"
 
+// Pre-process the AST to build the symbol table from assignments
+void preprocess_symbol_table(Node* node, SymbolTable* symbol_table) {
+    if (!node) return;
+    
+    // Process assignment nodes
+    if (node->type == NODE_ASSIGN && node->name) {
+        int value = 0;
+        // If the right side is a boolean literal, use its value
+        if (node->right && node->right->type == NODE_BOOL) {
+            value = node->right->bool_val;
+        }
+        // Add the variable to the symbol table
+        add_or_update_symbol(symbol_table, node->name, value);
+    }
+    
+    // Recursively process child nodes
+    if (node->left) preprocess_symbol_table(node->left, symbol_table);
+    if (node->right) preprocess_symbol_table(node->right, symbol_table);
+}
+
 SemanticAnalysisResult perform_semantic_analysis(Node* ast, SymbolTable* symbol_table) {
     SemanticAnalysisResult result = {SEMANTIC_OK, NULL};
 
@@ -12,6 +32,9 @@ SemanticAnalysisResult perform_semantic_analysis(Node* ast, SymbolTable* symbol_
         return result;
     }
 
+    // First, preprocess the AST to build the symbol table from assignments
+    preprocess_symbol_table(ast, symbol_table);
+    
     // Validate variable usage
     if (!validate_variable_usage(ast, symbol_table)) {
         result.error_code = SEMANTIC_UNDEFINED_VARIABLE;
@@ -34,12 +57,32 @@ bool validate_variable_usage(Node* node, SymbolTable* symbol_table) {
 
     switch (node->type) {
         case NODE_VAR:
-            // Check if variable exists in symbol table
-            // Implement symbol table lookup
-            for (int i = 0; i < symbol_table->size; i++) {
-                if (strcmp(symbol_table->symbols[i].name, node->name) == 0) {
-                    return true;
+            // Check if variable exists in symbol table using the refactored function
+            if (get_symbol_value(symbol_table, node->name) == ERROR_SYMBOL_NOT_FOUND) {
+                return false;
+            }
+            return true;
+
+        case NODE_ASSIGN:
+            // For assignments, add the variable to the symbol table and validate the right side
+            if (node->right) {
+                // Evaluate the right side first to ensure it's valid
+                if (!validate_variable_usage(node->right, symbol_table)) {
+                    return false;
                 }
+                
+                // Determine the boolean value (assuming right node has been evaluated)
+                int value = 0;
+                if (node->right->type == NODE_BOOL) {
+                    value = node->right->bool_val;
+                }
+                
+                // Add or update the symbol in the table
+                int result = add_or_update_symbol(symbol_table, node->name, value);
+                if (result < 0) {
+                    return false; // Failed to add to symbol table
+                }
+                return true;
             }
             return false;
 
@@ -58,20 +101,15 @@ bool validate_variable_usage(Node* node, SymbolTable* symbol_table) {
 
         case NODE_EXISTS:
         case NODE_FORALL:
-            // Add variable to symbol table for the quantified expression
-            // Implement symbol table insertion
-            if (symbol_table->size >= symbol_table->capacity) {
-                // Resize the symbols array
-                symbol_table->capacity = symbol_table->capacity == 0 ? 10 : symbol_table->capacity * 2;
-                symbol_table->symbols = realloc(symbol_table->symbols, 
-                    symbol_table->capacity * sizeof(Symbol));
+            // Add variable to symbol table for the quantified expression using refactored function
+            if (add_or_update_symbol(symbol_table, node->name, 0) < 0) {
+                return false;
             }
-            
-            // Add the new symbol
-            strcpy(symbol_table->symbols[symbol_table->size].name, node->name);
-            symbol_table->symbols[symbol_table->size].value = 0;
-            symbol_table->size++;
             return validate_variable_usage(node->left, symbol_table);
+
+        case NODE_BOOL:
+            // Boolean literals are always valid
+            return true;
 
         default:
             return true;

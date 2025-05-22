@@ -66,6 +66,7 @@ Node *create_boolean_node(int value);
 void print_ast(Node *node, int indent);
 void free_ast(Node *node);
 Node *clone_node(const Node *node);
+char* node_to_string(Node* node);
 
 // Evaluation steps
 EvaluationSteps *init_evaluation_steps();

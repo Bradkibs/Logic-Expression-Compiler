@@ -2,19 +2,33 @@ Logical Expression Evaluation
 ---------------------------
 
 Starting evaluation of multiple expressions
-Evaluating expression: B = TRUE
-Assigned B = TRUE
-Updated core variable in symbol table
+Evaluating expression: R = TRUE
+Assigned R = TRUE
 Result: TRUE
 
-Evaluating expression: C = FALSE
-Assigned C = FALSE
-Updated core variable in symbol table
+Evaluating expression: S = FALSE
+Assigned S = FALSE
 Result: FALSE
 
-Evaluating expression: B OR C
-Substituted variable B with value TRUE
-Substituted variable C with value FALSE
+Evaluating expression: T = TRUE
+Assigned T = TRUE
+Result: TRUE
+
+Evaluating expression: NEW = TRUE
+Assigned NEW = TRUE
+Result: TRUE
+
+Evaluating expression: INTERESTING_VARIABLE = FALSE
+Assigned INTERESTING_VARIABLE = FALSE
+Result: FALSE
+
+Evaluating expression: R AND S OR T AND NEW
+Substituted variable R with value TRUE
+Substituted variable S with value FALSE
+Evaluated AND operation
+Substituted variable T with value TRUE
+Substituted variable NEW with value TRUE
+Evaluated AND operation
 Evaluated OR operation
 Result: TRUE
 
