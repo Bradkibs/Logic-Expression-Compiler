@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <libgen.h>
+#include <unistd.h>  // For mkdtemp
 #include "C_Components/ast.h"
 #include "C_Components/symbol_table.h"
 #include "C_Components/semantic_analyzer.h"
@@ -306,25 +307,98 @@ int compile_file(const char* input_file, const char* output_file) {
                symbol_table->symbols[i].value ? "TRUE" : "FALSE");
     }
     
-    // Generate LLVM IR
-    printf("Generating LLVM IR...\n");
+    // Perform semantic analysis on each expression in the AST
+    for (int i = 0; i < multi_ast->count; i++) {
+        Node* expr = multi_ast->statements[i];
+        if (!expr) continue;
+        
+        // Skip assignments since they've already been processed
+        if (expr->type == NODE_ASSIGN) continue;
+        
+        SemanticAnalysisResult semantic_result = perform_semantic_analysis(expr, symbol_table);
+        if (semantic_result.error_code != SEMANTIC_OK) {
+            fprintf(stderr, "Semantic error in expression: %s\n", semantic_result.error_message);
+            if (semantic_result.error_message) free(semantic_result.error_message);
+            free_multi_statement_ast(multi_ast);
+            free_symbol_table(symbol_table);
+            return 1;
+        }
+    }
     
-    // Pass the entire multi-statement AST to the LLVM backend
-    LLVMCodegenResult ir_result = generate_llvm_ir(multi_ast, symbol_table, output_file);
-    if (ir_result.error_code != LLVM_CODEGEN_OK) {
-        fprintf(stderr, "LLVM code generation error: %s\n", ir_result.error_message);
-        free_llvm_codegen_result(&ir_result);
+    // Generate LLVM IR and bitcode
+    printf("Generating LLVM IR and bitcode...\n");
+    
+    // Create a temporary directory for intermediate files
+    char temp_dir[] = "/tmp/lec_XXXXXX";
+    if (!mkdtemp(temp_dir)) {
+        perror("Failed to create temporary directory");
         free_multi_statement_ast(multi_ast);
         free_symbol_table(symbol_table);
         return 1;
     }
     
-    // Compile and link the generated IR
-    printf("Compiling and linking...\n");
-    LLVMCodegenResult compile_result = compile_and_link_ir(ir_result.output_file, output_file);
-    if (compile_result.error_code != LLVM_CODEGEN_OK) {
-        fprintf(stderr, "Compilation error: %s\n", compile_result.error_message);
+    // Generate LLVM IR
+    LLVMCodegenResult ir_result = generate_llvm_ir(multi_ast, symbol_table, output_file);
+    if (ir_result.error_code != LLVM_CODEGEN_OK) {
+        fprintf(stderr, "LLVM code generation error: %s\n", 
+                ir_result.error_message ? ir_result.error_message : "Unknown error");
         free_llvm_codegen_result(&ir_result);
+        free_multi_statement_ast(multi_ast);
+        free_symbol_table(symbol_table);
+        // Clean up temp directory
+        char cmd[2048];
+        snprintf(cmd, sizeof(cmd), "rm -rf %s", temp_dir);
+        system(cmd);
+        return 1;
+    }
+    
+    // Create a temporary IR file in the temp directory
+    char temp_ir_filename[2048];
+    snprintf(temp_ir_filename, sizeof(temp_ir_filename), "%s/temp.ll", temp_dir);
+    
+    // Save the IR to the temporary file first
+    LLVMCodegenResult temp_save = save_llvm_ir(ir_result.module, temp_ir_filename);
+    if (temp_save.error_code != LLVM_CODEGEN_OK) {
+        fprintf(stderr, "Warning: Failed to save temporary IR file: %s\n", 
+               temp_save.error_message ? temp_save.error_message : "Unknown error");
+        free_llvm_codegen_result(&temp_save);
+        // Continue anyway as this is not a critical error
+    }
+    
+    // Create the output IR filename (same as output file but with .ll extension)
+    char ir_filename[2048];
+    snprintf(ir_filename, sizeof(ir_filename), "%s.ll", output_file);
+    
+    // Save the IR to the final location
+    LLVMCodegenResult save_result = save_llvm_ir(ir_result.module, ir_filename);
+    if (save_result.error_code != LLVM_CODEGEN_OK) {
+        fprintf(stderr, "Failed to save LLVM IR: %s\n", 
+                save_result.error_message ? save_result.error_message : "Unknown error");
+        free_llvm_codegen_result(&ir_result);
+        free_llvm_codegen_result(&save_result);
+        free_multi_statement_ast(multi_ast);
+        free_symbol_table(symbol_table);
+        // Clean up temp directory
+        char cmd[2048];
+        snprintf(cmd, sizeof(cmd), "rm -rf %s", temp_dir);
+        system(cmd);
+        return 1;
+    }
+    
+    // Compile and link the generated IR
+    printf("Compiling and linking LLVM IR...\n");
+    LLVMCodegenResult compile_result = compile_and_link_ir(ir_filename, output_file);
+    
+    // Clean up intermediate files
+    char cleanup_cmd[4096];
+    snprintf(cleanup_cmd, sizeof(cleanup_cmd), "rm -rf %s", temp_dir);
+    system(cleanup_cmd);
+    
+    if (compile_result.error_code != LLVM_CODEGEN_OK) {
+        fprintf(stderr, "Compilation error: %s\n", 
+                compile_result.error_message ? compile_result.error_message : "Unknown error");
+        free_llvm_codegen_result(&ir_result);
+        free_llvm_codegen_result(&save_result);
         free_llvm_codegen_result(&compile_result);
         free_multi_statement_ast(multi_ast);
         free_symbol_table(symbol_table);
@@ -332,8 +406,10 @@ int compile_file(const char* input_file, const char* output_file) {
     }
     
     // Clean up
-    printf("Compilation successful. Executable created: %s\n", compile_result.output_file);
+    printf("Compilation successful. Executable created: %s\n", output_file);
+    printf("LLVM IR was saved to: %s\n", ir_filename);
     free_llvm_codegen_result(&ir_result);
+    free_llvm_codegen_result(&save_result);
     free_llvm_codegen_result(&compile_result);
     free_multi_statement_ast(multi_ast);
     free_symbol_table(symbol_table);

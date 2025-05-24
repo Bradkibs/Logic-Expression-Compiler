@@ -61,7 +61,11 @@ expr:
     | expr EQUIV expr               { $$ = create_equiv_node($1, $3); }
     | EXISTS IDENTIFIER LPAREN expr RPAREN        { $$ = create_exists_node($2, $4); }
     | FORALL IDENTIFIER LPAREN expr RPAREN        { $$ = create_forall_node($2, $4); }
-    | LPAREN expr RPAREN            { $$ = $2; }
+    | LPAREN expr RPAREN            { 
+        // Set the is_parenthesized flag for the expression
+        $2->is_parenthesized = 1; 
+        $$ = $2; 
+      }
     | error { yyerror("Syntax error: invalid expression"); YYABORT; }
     ;
 

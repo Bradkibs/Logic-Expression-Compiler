@@ -1,3 +1,18 @@
 /.vscode
 *.o
 *.d
+*.a
+*.bc
+*.ll
+*.s
+*.out
+lec_compiler_llvm
+test_*
+output*
+
+# Generated files
+C_Components/lexer.c
+C_Components/parser.c
+C_Components/parser.h
+C_Components/parser.tab.*
+C_Components/lex.yy.c

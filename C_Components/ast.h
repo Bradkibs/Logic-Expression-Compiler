@@ -31,6 +31,7 @@ typedef struct Node
     struct Node *left;
     struct Node *right;
     int bool_val; // Used for boolean literals and evaluated results
+    int is_parenthesized; // Flag to track if the expression is parenthesized
 } Node;
 
 // Structure for recording evaluation steps

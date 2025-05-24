@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include "semantic_analyzer.h"
+#include "ast.h"
 #include "symbol_table.h"
 
 // Pre-process the AST to build the symbol table from assignments
@@ -47,6 +49,26 @@ SemanticAnalysisResult perform_semantic_analysis(Node* ast, SymbolTable* symbol_
         result.error_code = SEMANTIC_INVALID_QUANTIFIER;
         result.error_message = strdup("Invalid quantifier expression");
         return result;
+    }
+    
+    // Check for ambiguous expressions that should have parentheses
+    bool ambiguous = false;
+    if (!check_ambiguous_expression(ast, &ambiguous) && ambiguous) {
+        char* parenthesized = generate_parenthesized_expression(ast);
+        if (parenthesized) {
+            char* error_msg = malloc(strlen(parenthesized) + 100);
+            if (error_msg) {
+                sprintf(error_msg, "Ambiguous expression detected. Please use parentheses to clarify. Suggested: %s", parenthesized);
+                result.error_code = SEMANTIC_AMBIGUOUS_EXPRESSION;
+                result.error_message = error_msg;
+            }
+            free(parenthesized);
+            return result;
+        } else {
+            result.error_code = SEMANTIC_AMBIGUOUS_EXPRESSION;
+            result.error_message = strdup("Ambiguous expression detected. Please use parentheses to clarify precedence.");
+            return result;
+        }
     }
 
     return result;
@@ -142,4 +164,234 @@ bool validate_quantifier_expression(Node* node, SymbolTable* symbol_table) {
         default:
             return true;
     }
+}
+
+// Function to check if an expression is ambiguous (e.g. needs parentheses)
+bool check_ambiguous_expression(Node* node, bool* ambiguous) {
+    if (!node) return true;
+    
+    // Initialize ambiguous flag to false if not already set
+    if (!ambiguous) return false;
+    
+    // If the node is explicitly parenthesized, it's not ambiguous
+    if (node->is_parenthesized) {
+        return true;
+    }
+    
+    switch (node->type) {
+        case NODE_VAR:
+        case NODE_BOOL:
+        case NODE_ASSIGN:
+            // These are not ambiguous
+            return true;
+            
+        case NODE_NOT:
+            // For NOT nodes, only require parentheses around other operators
+            // Allow NOT without parentheses for variables, booleans, and other NOTs
+            if (node->left) {
+                // If the left child is a binary operator, it needs parentheses
+                if (node->left->type == NODE_AND || node->left->type == NODE_OR ||
+                    node->left->type == NODE_XOR || node->left->type == NODE_XNOR ||
+                    node->left->type == NODE_IMPLIES || node->left->type == NODE_IFF ||
+                    node->left->type == NODE_EQUIV) {
+                    *ambiguous = true;
+                    return false;
+                }
+                // For other cases (variables, booleans, or other NOTs), continue checking
+                return check_ambiguous_expression(node->left, ambiguous);
+            }
+            return true;
+            
+        case NODE_IMPLIES:
+        case NODE_IFF:
+        case NODE_EQUIV: {
+            // These operators have lower precedence, so their operands might need parentheses
+            bool left_ok = true;
+            bool right_ok = true;
+            
+            // Check left child
+            if (node->left) {
+                // Left side needs parentheses if it's a binary operator with lower or equal precedence
+                if (node->left->type == NODE_IMPLIES || node->left->type == NODE_IFF || 
+                    node->left->type == NODE_EQUIV) {
+                    *ambiguous = true;
+                    return false;
+                }
+                left_ok = check_ambiguous_expression(node->left, ambiguous);
+            }
+            
+            // Check right child
+            if (node->right) {
+                // Right side needs parentheses if it's a binary operator
+                if (node->right->type == NODE_AND || node->right->type == NODE_OR ||
+                    node->right->type == NODE_XOR || node->right->type == NODE_XNOR ||
+                    node->right->type == NODE_IMPLIES || node->right->type == NODE_IFF ||
+                    node->right->type == NODE_EQUIV) {
+                    *ambiguous = true;
+                    return false;
+                }
+                right_ok = check_ambiguous_expression(node->right, ambiguous);
+            }
+            
+            return left_ok && right_ok;
+        }
+            
+        case NODE_AND:
+        case NODE_OR:
+        case NODE_XOR:
+        case NODE_XNOR: {
+            // These operators have higher precedence
+            bool left_ok = true;
+            bool right_ok = true;
+            
+            // Check left child
+            if (node->left) {
+                // Left side needs parentheses if it's a binary operator with lower precedence
+                if (node->left->type == NODE_IMPLIES || node->left->type == NODE_IFF || 
+                    node->left->type == NODE_EQUIV) {
+                    *ambiguous = true;
+                    return false;
+                }
+                left_ok = check_ambiguous_expression(node->left, ambiguous);
+            }
+            
+            // Check right child
+            if (node->right) {
+                // Right side needs parentheses if it's a binary operator with lower or equal precedence
+                if (node->right->type == NODE_IMPLIES || node->right->type == NODE_IFF || 
+                    node->right->type == NODE_EQUIV) {
+                    *ambiguous = true;
+                    return false;
+                }
+                right_ok = check_ambiguous_expression(node->right, ambiguous);
+            }
+            
+            return left_ok && right_ok;
+        }
+            
+        default:
+            return true;
+    }
+}
+
+// Function to generate a fully parenthesized expression string
+char* generate_parenthesized_expression(Node* node) {
+    if (!node) return NULL;
+    
+    char* left_str = NULL;
+    char* right_str = NULL;
+    char* result = NULL;
+    
+    switch (node->type) {
+        case NODE_BOOL:
+            result = strdup(node->bool_val ? "TRUE" : "FALSE");
+            break;
+            
+        case NODE_VAR:
+            result = strdup(node->name);
+            break;
+            
+        case NODE_NOT:
+            left_str = generate_parenthesized_expression(node->left);
+            if (left_str) {
+                // Always add parentheses around NOT expressions
+                result = malloc(strlen(left_str) + 10); // NOT + ( + ) + null terminator
+                if (result) {
+                    sprintf(result, "NOT (%s)", left_str);
+                }
+                free(left_str);
+            }
+            break;
+            
+        case NODE_AND:
+            left_str = generate_parenthesized_expression(node->left);
+            right_str = generate_parenthesized_expression(node->right);
+            if (left_str && right_str) {
+                // Always add parentheses around AND expressions
+                result = malloc(strlen(left_str) + strlen(right_str) + 10);
+                if (result) {
+                    sprintf(result, "(%s) AND (%s)", left_str, right_str);
+                }
+                free(left_str);
+                free(right_str);
+            }
+            break;
+            
+        case NODE_OR:
+            left_str = generate_parenthesized_expression(node->left);
+            right_str = generate_parenthesized_expression(node->right);
+            if (left_str && right_str) {
+                // Always add parentheses around OR expressions
+                result = malloc(strlen(left_str) + strlen(right_str) + 10);
+                if (result) {
+                    sprintf(result, "(%s) OR (%s)", left_str, right_str);
+                }
+                free(left_str);
+                free(right_str);
+            }
+            break;
+            
+        case NODE_XOR:
+            left_str = generate_parenthesized_expression(node->left);
+            right_str = generate_parenthesized_expression(node->right);
+            if (left_str && right_str) {
+                // Always add parentheses around XOR expressions
+                result = malloc(strlen(left_str) + strlen(right_str) + 10);
+                if (result) {
+                    sprintf(result, "(%s) XOR (%s)", left_str, right_str);
+                }
+                free(left_str);
+                free(right_str);
+            }
+            break;
+            
+        case NODE_IMPLIES:
+            left_str = generate_parenthesized_expression(node->left);
+            right_str = generate_parenthesized_expression(node->right);
+            if (left_str && right_str) {
+                // Always add parentheses around IMPLIES expressions
+                result = malloc(strlen(left_str) + strlen(right_str) + 10);
+                if (result) {
+                    sprintf(result, "(%s) -> (%s)", left_str, right_str);
+                }
+                free(left_str);
+                free(right_str);
+            }
+            break;
+            
+        case NODE_IFF:
+        case NODE_EQUIV:
+            left_str = generate_parenthesized_expression(node->left);
+            right_str = generate_parenthesized_expression(node->right);
+            if (left_str && right_str) {
+                // Always add parentheses around IFF/EQUIV expressions
+                result = malloc(strlen(left_str) + strlen(right_str) + 12);
+                if (result) {
+                    sprintf(result, "(%s) <-> (%s)", left_str, right_str);
+                }
+                free(left_str);
+                free(right_str);
+            }
+            break;
+            
+        case NODE_ASSIGN:
+            if (node->left && node->left->type == NODE_VAR) {
+                right_str = generate_parenthesized_expression(node->right);
+                if (right_str) {
+                    result = malloc(strlen(node->left->name) + strlen(right_str) + 5);
+                    if (result) {
+                        sprintf(result, "%s = %s", node->left->name, right_str);
+                    }
+                    free(right_str);
+                }
+            }
+            break;
+            
+        default:
+            // For other node types, return a default string
+            result = strdup("UNKNOWN");
+            break;
+    }
+    
+    return result;
 }

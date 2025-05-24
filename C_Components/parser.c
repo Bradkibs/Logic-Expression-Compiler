@@ -520,7 +520,7 @@ static const yytype_int8 yyrline[] =
 {
        0,    41,    41,    42,    46,    47,    51,    52,    53,    54,
       55,    56,    57,    58,    59,    60,    61,    62,    63,    64,
-      65
+      69
 };
 #endif
 
@@ -1216,18 +1216,22 @@ yyreduce:
 
   case 19: /* expr: LPAREN expr RPAREN  */
 #line 64 "parser.y"
-                                    { (yyval.node) = (yyvsp[-1].node); }
-#line 1221 "parser.c"
+                                    { 
+        // Set the is_parenthesized flag for the expression
+        (yyvsp[-1].node)->is_parenthesized = 1; 
+        (yyval.node) = (yyvsp[-1].node); 
+      }
+#line 1225 "parser.c"
     break;
 
   case 20: /* expr: error  */
-#line 65 "parser.y"
+#line 69 "parser.y"
             { yyerror("Syntax error: invalid expression"); YYABORT; }
-#line 1227 "parser.c"
+#line 1231 "parser.c"
     break;
 
 
-#line 1231 "parser.c"
+#line 1235 "parser.c"
 
       default: break;
     }
@@ -1420,5 +1424,5 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 68 "parser.y"
+#line 72 "parser.y"
 

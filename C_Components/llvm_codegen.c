@@ -1,19 +1,28 @@
-#include "llvm_codegen.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>  // For mkdtemp
+#include <libgen.h>  // For dirname
+#include <limits.h>  // For PATH_MAX
 
 // LLVM C API headers
 #include <llvm-c/Core.h>
 #include <llvm-c/Analysis.h>
 #include <llvm-c/Target.h>
 #include <llvm-c/BitWriter.h>
+#include <llvm-c/BitReader.h>
+#include <llvm-c/IRReader.h>
+
+#include "llvm_codegen.h"
 
 // Forward declarations
 static LLVMValueRef gen_expression(LLVMContextRef context, LLVMBuilderRef builder, 
                                   Node* node, SymbolTable* symbol_table, 
                                   LLVMValueRef true_str, LLVMValueRef false_str,
                                   LLVMValueRef printf_func, LLVMTypeRef printf_type);
+
+// Function to save LLVM IR to a file
+LLVMCodegenResult save_llvm_ir(LLVMModuleRef module, const char* filename);
 
 // Generate detailed evaluation messages
 static void add_evaluation_message(LLVMBuilderRef builder, LLVMValueRef printf_func, 
@@ -187,8 +196,13 @@ LLVMCodegenResult generate_llvm_ir(MultiStatementAST* multi_ast, SymbolTable* sy
     
     // Create context, module, and builder
     LLVMContextRef context = LLVMContextCreate();
-    LLVMModuleRef module = LLVMModuleCreateWithName("logic_module");
+    char module_name[256];
+    snprintf(module_name, sizeof(module_name), "%s_module", output_filename);
+    LLVMModuleRef module = LLVMModuleCreateWithName(module_name);
     LLVMBuilderRef builder = LLVMCreateBuilder();
+    
+    // Store the module in the result structure
+    result.module = module;
     
     // Create main function
     LLVMTypeRef main_type = LLVMFunctionType(LLVMInt32Type(), NULL, 0, 0);
@@ -291,12 +305,26 @@ LLVMCodegenResult generate_llvm_ir(MultiStatementAST* multi_ast, SymbolTable* sy
     // Return 0
     LLVMBuildRet(builder, LLVMConstInt(LLVMInt32Type(), 0, 0));
     
-    // Create bitcode filename
-    char ir_filename[256];
-    snprintf(ir_filename, sizeof(ir_filename), "%s.bc", output_filename);
+    // Create filenames for bitcode and IR
+    char bitcode_filename[512];
+    char ir_filename[512];
     
-    // Write module to file
-    if (LLVMWriteBitcodeToFile(module, ir_filename) != 0) {
+    snprintf(bitcode_filename, sizeof(bitcode_filename), "%s.bc", output_filename);
+    snprintf(ir_filename, sizeof(ir_filename), "%s.ll", output_filename);
+    
+    // Save LLVM IR to file first
+    LLVMCodegenResult ir_result = save_llvm_ir(module, ir_filename);
+    if (ir_result.error_code != LLVM_CODEGEN_OK) {
+        // If we fail to save IR, still continue with compilation
+        printf("Warning: Failed to save LLVM IR: %s\n", ir_result.error_message);
+        free_llvm_codegen_result(&ir_result);
+    } else {
+        printf("LLVM IR saved to %s\n", ir_filename);
+        free_llvm_codegen_result(&ir_result);
+    }
+    
+    // Write bitcode to file
+    if (LLVMWriteBitcodeToFile(module, bitcode_filename) != 0) {
         result.error_code = LLVM_CODEGEN_ERROR;
         result.error_message = strdup("Failed to write bitcode to file");
         
@@ -307,13 +335,45 @@ LLVMCodegenResult generate_llvm_ir(MultiStatementAST* multi_ast, SymbolTable* sy
         return result;
     }
     
-    // Clean up
-    LLVMDisposeBuilder(builder);
-    LLVMDisposeModule(module);
-    LLVMContextDispose(context);
+    result.output_file = strdup(bitcode_filename);
     
-    // Return success
-    result.output_file = strdup(ir_filename);
+    // Clean up (don't dispose of the module as it's being returned)
+    LLVMDisposeBuilder(builder);
+    
+    // Note: We don't dispose of the context here as it's needed for the module
+    // The caller is responsible for cleaning up the module and context
+    
+    return result;
+}
+
+// Save LLVM IR to a human-readable .ll file
+LLVMCodegenResult save_llvm_ir(LLVMModuleRef module, const char* filename) {
+    LLVMCodegenResult result = {LLVM_CODEGEN_OK, NULL, NULL};
+    char* error_msg = NULL;
+    
+    if (!module || !filename) {
+        result.error_code = LLVM_CODEGEN_ERROR;
+        result.error_message = strdup("Invalid parameters for saving LLVM IR");
+        return result;
+    }
+    
+    // First, verify the module
+    if (LLVMVerifyModule(module, LLVMAbortProcessAction, &error_msg)) {
+        result.error_code = LLVM_CODEGEN_ERROR;
+        result.error_message = strdup(error_msg);
+        LLVMDisposeMessage(error_msg);
+        return result;
+    }
+    
+    // Print the module to the file
+    if (LLVMPrintModuleToFile(module, filename, &error_msg)) {
+        result.error_code = LLVM_CODEGEN_ERROR;
+        result.error_message = strdup(error_msg ? error_msg : "Unknown error printing module");
+        if (error_msg) LLVMDisposeMessage(error_msg);
+        return result;
+    }
+    
+    result.output_file = strdup(filename);
     return result;
 }
 
@@ -328,9 +388,23 @@ LLVMCodegenResult compile_and_link_ir(const char* ir_filename, const char* outpu
         return result;
     }
     
-    // Create clang command
-    char command[512];
-    snprintf(command, sizeof(command), "clang -o %s %s", output_filename, ir_filename);
+    // Check file extension to determine if it's LLVM IR (.ll) or bitcode (.bc)
+    const char* ext = strrchr(ir_filename, '.');
+    int is_ir_file = (ext && strcmp(ext, ".ll") == 0);
+    
+    // Create appropriate clang command
+    char command[1024];
+    if (is_ir_file) {
+        // For LLVM IR (.ll) files, we need to use -x ir
+        snprintf(command, sizeof(command), 
+                "clang -x ir %s -o %s", ir_filename, output_filename);
+    } else {
+        // For bitcode (.bc) files, we can use it directly
+        snprintf(command, sizeof(command), 
+                "clang %s -o %s", ir_filename, output_filename);
+    }
+    
+    printf("Executing: %s\n", command);
     
     // Execute command
     int status = system(command);
@@ -340,6 +414,7 @@ LLVMCodegenResult compile_and_link_ir(const char* ir_filename, const char* outpu
         return result;
     }
     
+    printf("Successfully compiled to: %s\n", output_filename);
     result.output_file = strdup(output_filename);
     return result;
 }
@@ -357,4 +432,18 @@ void free_llvm_codegen_result(LLVMCodegenResult* result) {
         free(result->output_file);
         result->output_file = NULL;
     }
+    
+    // Clean up the LLVM module and its context if they exist
+    if (result->module) {
+        LLVMContextRef context = LLVMGetModuleContext(result->module);
+        LLVMDisposeModule(result->module);
+        result->module = NULL;
+        
+        // Only dispose the context if it's not the global context
+        if (context != LLVMGetGlobalContext()) {
+            LLVMContextDispose(context);
+        }
+    }
+    
+    result->error_code = LLVM_CODEGEN_OK;
 }

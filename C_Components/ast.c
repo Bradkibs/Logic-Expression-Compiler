@@ -36,6 +36,7 @@ Node *create_node(NodeType type, char *name, Node *left, Node *right, int bool_v
     node->left = left;
     node->right = right;
     node->bool_val = bool_val;
+    node->is_parenthesized = 0; // Initialize as not parenthesized by default
     return node;
 }
 
@@ -104,9 +105,15 @@ Node *clone_node(const Node *node)
     if (!node)
         return NULL;
 
-    Node *left_copy = clone_node(node->left);
-    Node *right_copy = clone_node(node->right);
-    return create_node(node->type, node->name, left_copy, right_copy, node->bool_val);
+    Node *new_node = create_node(node->type, 
+                                node->name ? strdup(node->name) : NULL,
+                                clone_node(node->left),
+                                clone_node(node->right),
+                                node->bool_val);
+    if (new_node) {
+        new_node->is_parenthesized = node->is_parenthesized;
+    }
+    return new_node;
 }
 
 // Logical Laws

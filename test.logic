@@ -1,0 +1,6 @@
+A = TRUE
+B = FALSE
+C = FALSE
+
+(A AND B) OR (NOT C)
+(A OR B) AND (NOT (A AND B))
