@@ -137,13 +137,103 @@ A AND B OR C
 
 ## Running the Compiler
 
+### Basic Usage
 ```bash
-# Compile a .lec file
+# Compile a .lec file (output will be named 'output')
 ./lec_compiler_llvm input.lec
 
-# This will generate an executable with the same name as the input file
-./input
+# Compile with custom output filename
+./lec_compiler_llvm input.lec my_program
+
+# Run the compiled program
+./output  # or ./my_program if you specified a custom name
 ```
+
+### Command Line Options
+- `input.lec`: Required. The input file containing logical expressions
+- `output_file`: Optional. The name of the output executable (default: 'output')
+
+## Compiler Development Phases
+
+The Logical Expression Compiler follows these standard compiler phases, each implemented as a separate component:
+
+1. **Lexical Analysis** (`lexer.l`)
+   - Tokenizes input characters into meaningful tokens
+   - Recognizes keywords, operators, variables, and literals
+   - Handles whitespace and comments
+
+2. **Syntax Analysis** (`parser.y`)
+   - Parses tokens into an Abstract Syntax Tree (AST)
+   - Validates grammar and syntax
+   - Handles operator precedence and associativity
+
+3. **Semantic Analysis** (`semantic_analyzer.c/h`)
+   - Performs type checking
+   - Validates variable declarations and usage
+   - Checks for undefined variables and type mismatches
+
+4. **Intermediate Code Generation**
+   - Converts AST to Three-Address Code (TAC)
+   - Handles temporary variables and labels
+   - Prepares for target code generation
+
+5. **Code Generation** (`llvm_codegen.c/h`)
+   - Generates LLVM Intermediate Representation (IR)
+   - Optimizes the generated code
+   - Produces target machine code
+
+6. **Linking & Execution**
+   - Links with runtime libraries
+   - Produces an executable binary
+   - Handles program execution
+
+## Development Workflow
+
+1. **Setup Development Environment**
+   ```bash
+   # Install dependencies
+   sudo apt-get install llvm flex bison
+   
+   # Build the compiler
+   make -f Makefile.llvm
+   ```
+
+2. **Testing**
+   - Add test cases in `test_*.lec` files
+   - Run tests: `make test`
+   - Debug using `gdb` or `lldb`
+
+3. **Adding New Features**
+   - Update lexer for new tokens
+   - Extend the grammar in the parser
+   - Implement semantic analysis
+   - Add code generation support
+
+4. **Optimization**
+   - Profile the compiler with `perf` or `valgrind`
+   - Optimize critical paths
+   - Add compiler optimization passes
+
+## Example Development Cycle
+
+1. **Add a new operator** (e.g., NAND):
+   - Add token to `lexer.l`
+   - Update grammar in `parser.y`
+   - Add semantic checks
+   - Implement code generation
+   - Add test cases
+
+2. **Optimize performance**:
+   - Profile the compiler
+   - Identify bottlenecks
+   - Implement optimizations
+   - Verify correctness with tests
+
+3. **Debug an issue**:
+   - Reproduce with minimal test case
+   - Add debug logging
+   - Fix the issue
+   - Add regression test
 
 ## Running Tests
 
