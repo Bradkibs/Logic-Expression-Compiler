@@ -7,10 +7,9 @@ A compiler for logical expressions that supports parsing, semantic analysis, and
 - **Lexical Analysis**: Tokenizes input using Flex
 - **Parsing**: Builds an Abstract Syntax Tree (AST) using Bison
 - **Semantic Analysis**: Validates expressions and checks for semantic correctness
-- **Intermediate Code Generation**: Converts AST to Three-Address Code (TAC)
-- **Assembly Generation**: Produces NASM x86-64 assembly code
-- **LLVM Backend**: Optional LLVM-based code generation
-- **Multiple Output Formats**: Can generate executable binaries or assembly code
+- **LLVM Backend**: Generates optimized machine code using LLVM
+- **Efficient Execution**: Produces optimized native executables
+- **Cross-Platform**: Works on any platform with LLVM support
 
 ## Supported Logical Operators
 
@@ -153,66 +152,73 @@ A AND B OR C
 - `input.lec`: Required. The input file containing logical expressions
 - `output_file`: Optional. The name of the output executable (default: 'output')
 
-## Compiler Development Phases
+## Compiler Architecture
 
-The Logical Expression Compiler follows these standard compiler phases, each implemented as a separate component:
+The Logical Expression Compiler uses LLVM for efficient code generation and optimization. Here's the compilation pipeline:
 
-1. **Lexical Analysis** (`lexer.l`)
-   - Tokenizes input characters into meaningful tokens
-   - Recognizes keywords, operators, variables, and literals
-   - Handles whitespace and comments
+1. **Frontend**
+   - **Lexical Analysis** (`lexer.l`)
+     - Tokenizes input into meaningful tokens
+     - Recognizes keywords, operators, and variables
+     - Handles whitespace and comments
+   
+   - **Syntax Analysis** (`parser.y`)
+     - Parses tokens into an Abstract Syntax Tree (AST)
+     - Validates grammar and syntax rules
+     - Manages operator precedence and associativity
 
-2. **Syntax Analysis** (`parser.y`)
-   - Parses tokens into an Abstract Syntax Tree (AST)
-   - Validates grammar and syntax
-   - Handles operator precedence and associativity
+2. **Semantic Analysis** (`semantic_analyzer.c/h`)
+   - Performs type checking and validation
+   - Manages symbol table and variable scopes
+   - Ensures semantic correctness of expressions
 
-3. **Semantic Analysis** (`semantic_analyzer.c/h`)
-   - Performs type checking
-   - Validates variable declarations and usage
-   - Checks for undefined variables and type mismatches
+3. **LLVM Backend** (`llvm_codegen.c/h`)
+   - **IR Generation**: Converts AST to LLVM Intermediate Representation
+   - **Optimization**: Applies LLVM optimization passes
+   - **Code Generation**: Produces efficient machine code
+   - **Linking**: Creates standalone executables
 
-4. **Intermediate Code Generation**
-   - Converts AST to Three-Address Code (TAC)
-   - Handles temporary variables and labels
-   - Prepares for target code generation
+4. **Runtime**
+   - Manages program execution
+   - Handles I/O operations
+   - Provides standard library functions
 
-5. **Code Generation** (`llvm_codegen.c/h`)
-   - Generates LLVM Intermediate Representation (IR)
-   - Optimizes the generated code
-   - Produces target machine code
+## LLVM Integration
 
-6. **Linking & Execution**
-   - Links with runtime libraries
-   - Produces an executable binary
-   - Handles program execution
+The compiler leverages LLVM's powerful optimization and code generation capabilities:
+
+- **LLVM IR Generation**: The `llvm_codegen.c` module translates the AST into LLVM IR
+- **Optimization Passes**: Multiple optimization levels are available
+- **Target Support**: Generates code for various architectures
+- **JIT Compilation**: Supports just-in-time compilation (future)
 
 ## Development Workflow
 
 1. **Setup Development Environment**
    ```bash
-   # Install dependencies
-   sudo apt-get install llvm flex bison
+   # Install LLVM and build tools
+   sudo apt-get install llvm-18 flex bison
    
-   # Build the compiler
+   # Build the compiler with LLVM support
    make -f Makefile.llvm
    ```
 
 2. **Testing**
    - Add test cases in `test_*.lec` files
    - Run tests: `make test`
-   - Debug using `gdb` or `lldb`
+   - Debug with LLVM tools: `opt`, `llc`, `lli`
+   - Use `lldb` for debugging generated code
 
-3. **Adding New Features**
-   - Update lexer for new tokens
-   - Extend the grammar in the parser
-   - Implement semantic analysis
-   - Add code generation support
+3. **Extending the Compiler**
+   - Add new operators in `lexer.l` and `parser.y`
+   - Extend the AST in `ast.h/c`
+   - Update semantic analysis in `semantic_analyzer.c/h`
+   - Add LLVM code generation in `llvm_codegen.c/h`
 
-4. **Optimization**
-   - Profile the compiler with `perf` or `valgrind`
-   - Optimize critical paths
-   - Add compiler optimization passes
+4. **Performance Optimization**
+   - Use `opt` to analyze and optimize LLVM IR
+   - Profile with `perf` or `valgrind`
+   - Add custom LLVM optimization passes if needed
 
 ## Example Development Cycle
 
