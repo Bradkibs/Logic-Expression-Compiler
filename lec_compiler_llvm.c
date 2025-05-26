@@ -197,13 +197,18 @@ void process_assignments(const char* file_contents, SymbolTable* symbol_table) {
                         }
                         
                         // Add the variable to the symbol table
-                        add_or_update_symbol(symbol_table, parsed_expression->name, value);
+                        char* var_name = strdup(parsed_expression->name);
+                        add_or_update_symbol(symbol_table, var_name, value);
                         printf("Added variable '%s' with value %d to symbol table\n", 
-                               parsed_expression->name, value);
+                               var_name, value);
+                        free(var_name);
                     }
                     
-                    free_ast(parsed_expression);
-                    parsed_expression = NULL;
+                    // Free the parsed expression
+                    if (parsed_expression) {
+                        free_ast(parsed_expression);
+                        parsed_expression = NULL;
+                    }
                 }
             }
         }
@@ -268,8 +273,14 @@ MultiStatementAST* parse_file_by_lines(const char* input_file, SymbolTable* symb
                 continue;
             }
             
-            // Add the statement to our multi-statement AST
-            add_statement(ast, parsed_expression);
+            // Skip assignment statements as they've already been processed
+            if (parsed_expression->type != NODE_ASSIGN) {
+                // Add the statement to our multi-statement AST
+                add_statement(ast, parsed_expression);
+            } else {
+                // Free the parsed assignment statement as it's already been processed
+                free_ast(parsed_expression);
+            }
             parsed_expression = NULL;  // Reset for next parse
         }
         

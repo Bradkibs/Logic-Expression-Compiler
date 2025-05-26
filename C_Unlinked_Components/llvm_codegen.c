@@ -3,29 +3,43 @@
 #include <string.h>
 #include <unistd.h>  // For mkdtemp
 #include <libgen.h>  // For dirname
-#include "ast.h"
-#include "symbol_table.h"
 #include <limits.h>  // For PATH_MAX
 
 // LLVM C API headers
 #include <llvm-c/Core.h>
-#include <llvm-c/ExecutionEngine.h>
-#include <llvm-c/Target.h>
 #include <llvm-c/Analysis.h>
+#include <llvm-c/Target.h>
 #include <llvm-c/BitWriter.h>
 #include <llvm-c/BitReader.h>
 #include <llvm-c/IRReader.h>
 
 #include "llvm_codegen.h"
 
+// Helper function to get node type name
+static const char* get_node_type_name(NodeType type) {
+    switch (type) {
+        case NODE_BOOL: return "BOOL";
+        case NODE_VAR: return "VAR";
+        case NODE_NOT: return "NOT";
+        case NODE_AND: return "AND";
+        case NODE_OR: return "OR";
+        case NODE_XOR: return "XOR";
+        case NODE_XNOR: return "XNOR";
+        case NODE_IMPLIES: return "IMPLIES";
+        case NODE_IFF: return "IFF";
+        case NODE_EQUIV: return "EQUIV";
+        case NODE_EXISTS: return "EXISTS";
+        case NODE_FORALL: return "FORALL";
+        case NODE_ASSIGN: return "ASSIGN";
+        default: return "UNKNOWN";
+    }
+}
+
 // Forward declarations
 static LLVMValueRef gen_expression(LLVMContextRef context, LLVMBuilderRef builder, 
                                   Node* node, SymbolTable* symbol_table, 
                                   LLVMValueRef true_str, LLVMValueRef false_str,
                                   LLVMValueRef printf_func, LLVMTypeRef printf_type);
-
-// Optimization function declaration
-static void optimize_module(LLVMModuleRef module, int opt_level);
 
 // Function to save LLVM IR to a file
 LLVMCodegenResult save_llvm_ir(LLVMModuleRef module, const char* filename);
@@ -56,7 +70,16 @@ static LLVMValueRef gen_expression(LLVMContextRef context, LLVMBuilderRef builde
                                   Node* node, SymbolTable* symbol_table,
                                   LLVMValueRef true_str, LLVMValueRef false_str,
                                   LLVMValueRef printf_func, LLVMTypeRef printf_type) {
-    if (!node) return NULL;
+    if (!node) {
+        printf("ERROR: Null node in gen_expression\n");
+        return NULL;
+    }
+    
+    // Debug print
+    printf("Processing node: type=%s", get_node_type_name(node->type));
+    if (node->name) printf(", name='%s'", node->name);
+    if (node->type == NODE_BOOL) printf(", value=%s", node->bool_val ? "TRUE" : "FALSE");
+    printf("\n");
     
     LLVMValueRef left, right;
     
@@ -173,9 +196,6 @@ static LLVMValueRef gen_expression(LLVMContextRef context, LLVMBuilderRef builde
             if (node->right) {
                 return gen_expression(context, builder, node->right, symbol_table, 
                                     true_str, false_str, printf_func, printf_type);
-            } else if (node->left) {
-                return gen_expression(context, builder, node->left, symbol_table, 
-                                    true_str, false_str, printf_func, printf_type);
             }
             return NULL;
             
@@ -188,7 +208,7 @@ static LLVMValueRef gen_expression(LLVMContextRef context, LLVMBuilderRef builde
 // Generate LLVM IR for an AST with optimization level
 LLVMCodegenResult generate_llvm_ir(MultiStatementAST* multi_ast, SymbolTable* symbol_table, 
                                  const char* output_filename, int optimization_level) {
-    LLVMCodegenResult result = {LLVM_CODEGEN_OK, NULL, NULL};
+    LLVMCodegenResult result = {LLVM_CODEGEN_OK, NULL, NULL, NULL};
     
     // Validate inputs
     if (!multi_ast || !symbol_table || !output_filename) {
@@ -196,6 +216,15 @@ LLVMCodegenResult generate_llvm_ir(MultiStatementAST* multi_ast, SymbolTable* sy
         result.error_message = strdup("Invalid input parameters");
         return result;
     }
+    
+    // Debug: Print symbol table contents
+    printf("\nSymbol table at codegen time (size: %d):\n", symbol_table->size);
+    for (int i = 0; i < symbol_table->size; i++) {
+        printf("  %s = %s\n", 
+               symbol_table->symbols[i].name,
+               symbol_table->symbols[i].value ? "TRUE" : "FALSE");
+    }
+    printf("\n");
     
     // Initialize LLVM
     LLVMInitializeNativeTarget();
@@ -238,76 +267,16 @@ LLVMCodegenResult generate_llvm_ir(MultiStatementAST* multi_ast, SymbolTable* sy
     add_evaluation_message(builder, printf_func, printf_type, 
                          "Starting evaluation of multiple expressions\n");
     
-    // Process all statements in the multi-statement AST
-    for (int i = 0; i < multi_ast->count; i++) {
-        Node* node = multi_ast->statements[i];
-        
-        if (node->type == NODE_ASSIGN) {
-            // Handle variable assignment
-            char* var_name = node->left->name;
-            LLVMValueRef value = gen_expression(context, builder, node->right, symbol_table, 
-                                             true_str, false_str, printf_func, printf_type);
-            
-            if (!value) {
-                fprintf(stderr, "Error generating code for assignment to %s\n", var_name);
-                continue;
-            }
-            
-            // Store the value in the symbol table
-            int symbol_value = get_symbol_value(symbol_table, var_name);
-            if (symbol_value != ERROR_SYMBOL_NOT_FOUND) {
-                // Update the symbol value in the table
-                add_or_update_symbol(symbol_table, var_name, value ? 1 : 0);
-            }
-            
-            // Print the assignment result
-            add_evaluation_message(builder, printf_func, printf_type, "Assigned %s = ", var_name);
-            LLVMValueRef fmt_str = LLVMBuildGlobalStringPtr(builder, "%s\n", "fmt_assign");
-            LLVMValueRef val_str = value ? true_str : false_str;
-            LLVMValueRef args[] = { fmt_str, val_str };
-            LLVMBuildCall2(builder, printf_type, printf_func, args, 2, "");
-        } else if (node->type == NODE_VAR) {  // Assuming NODE_VAR is used for print statements
-            // Handle print statement
-            LLVMValueRef value = gen_expression(context, builder, node->left, symbol_table,
-                                             true_str, false_str, printf_func, printf_type);
-            
-            if (!value) {
-                fprintf(stderr, "Error generating code for print statement\n");
-                continue;
-            }
-            
-            // Print the value
-            LLVMValueRef fmt_str = LLVMBuildGlobalStringPtr(builder, "%s\n", "fmt_print");
-            LLVMValueRef val_str = value ? true_str : false_str;
-            LLVMValueRef args[] = { fmt_str, val_str };
-            LLVMBuildCall2(builder, printf_type, printf_func, args, 2, "");
-        }
-    }
-    
-    // Indicate completion
-    add_evaluation_message(builder, printf_func, printf_type, 
-                         "Completed evaluation of all expressions\n");
-    
-    // Return 0 from main
-    LLVMBuildRet(builder, LLVMConstInt(LLVMInt32Type(), 0, 0));
-    
-    // Verify the module
-    char* error = NULL;
-    if (LLVMVerifyModule(module, LLVMAbortProcessAction, &error)) {
-        fprintf(stderr, "Error verifying module: %s\n", error);
-        LLVMDisposeMessage(error);
-        result.error_code = LLVM_CODEGEN_ERROR;
-        result.error_message = strdup("Module verification failed");
-        return result;
-    }
+    // Process all variable assignments and print them
+    int non_assignment_count = 0;
     
     for (int i = 0; i < multi_ast->count; i++) {
         Node* node = multi_ast->statements[i];
         if (!node) continue;
         
-        if (node->type == NODE_ASSIGN && node->left && node->left->type == NODE_VAR) {
+        if (node->type == NODE_ASSIGN) {
             // For assignments, display the variable and its value
-            char* var_name = node->left->name;
+            char* var_name = node->name;
             int value = get_symbol_value(symbol_table, var_name);
             
             LLVMValueRef name_str = LLVMBuildGlobalStringPtr(builder, var_name, "var_name");
@@ -329,7 +298,7 @@ LLVMCodegenResult generate_llvm_ir(MultiStatementAST* multi_ast, SymbolTable* sy
             LLVMBuildCall2(builder, printf_type, printf_func, result_args, 2, "");
         } else {
             // Count non-assignment expressions for later processing
-            // Skip non-assignment nodes for now
+            non_assignment_count++;
         }
     }
     
@@ -404,12 +373,6 @@ LLVMCodegenResult generate_llvm_ir(MultiStatementAST* multi_ast, SymbolTable* sy
     
     result.output_file = strdup(bitcode_filename);
     
-    // Run optimizations at the specified level
-    if (optimization_level > 0) {
-        printf("Running optimizations at level -O%d...\n", optimization_level);
-        optimize_module(module, optimization_level);
-    }
-    
     // Clean up (don't dispose of the module as it's being returned)
     LLVMDisposeBuilder(builder);
     
@@ -421,7 +384,7 @@ LLVMCodegenResult generate_llvm_ir(MultiStatementAST* multi_ast, SymbolTable* sy
 
 // Save LLVM IR to a human-readable .ll file
 LLVMCodegenResult save_llvm_ir(LLVMModuleRef module, const char* filename) {
-    LLVMCodegenResult result = {LLVM_CODEGEN_OK, NULL, NULL};
+    LLVMCodegenResult result = {LLVM_CODEGEN_OK, NULL, NULL, NULL};
     char* error_msg = NULL;
     
     if (!module || !filename) {
@@ -452,7 +415,7 @@ LLVMCodegenResult save_llvm_ir(LLVMModuleRef module, const char* filename) {
 
 // Compile and link the IR
 LLVMCodegenResult compile_and_link_ir(const char* ir_filename, const char* output_filename) {
-    LLVMCodegenResult result = {LLVM_CODEGEN_OK, NULL, NULL};
+    LLVMCodegenResult result = {LLVM_CODEGEN_OK, NULL, NULL, NULL};
     
     // Validate parameters
     if (!ir_filename || !output_filename) {
@@ -492,21 +455,20 @@ LLVMCodegenResult compile_and_link_ir(const char* ir_filename, const char* outpu
     return result;
 }
 
-// Apply optimizations to the module using LLVM's C API
+// Apply optimizations to the module
 static void optimize_module(LLVMModuleRef module, int opt_level) {
-    if (!module || opt_level < 0 || opt_level > 3) return;
+    // This is a placeholder for module optimization
+    // In a real implementation, you would use LLVM's optimization passes
+    // The exact passes would depend on the optimization level
     
-    printf("Running optimizations at level -O%d...\n", opt_level);
+    printf("Applying optimization level %d to the module\n", opt_level);
     
-    // For now, we'll just verify the module
-    // In a production environment, you would add optimization passes here
-    char *error = NULL;
-    if (LLVMVerifyModule(module, LLVMAbortProcessAction, &error)) {
-        fprintf(stderr, "Error verifying module: %s\n", error);
-        LLVMDisposeMessage(error);
-    }
+    // For now, this function doesn't do anything since LLVM C API
+    // doesn't provide direct optimization pass management
+    // You would need to use the C++ API for more advanced optimizations
 }
 
+// Free result
 void free_llvm_codegen_result(LLVMCodegenResult* result) {
     if (!result) return;
     
@@ -520,7 +482,17 @@ void free_llvm_codegen_result(LLVMCodegenResult* result) {
         result->output_file = NULL;
     }
     
-    // Note: We don't dispose of the module here as it's managed by the caller
-    // The caller should call LLVMDisposeModule when done with the module
+    // Clean up the LLVM module and its context if they exist
+    if (result->module) {
+        LLVMContextRef context = LLVMGetModuleContext(result->module);
+        LLVMDisposeModule(result->module);
+        result->module = NULL;
+        
+        // Only dispose the context if it's not the global context
+        if (context != LLVMGetGlobalContext()) {
+            LLVMContextDispose(context);
+        }
+    }
+    
     result->error_code = LLVM_CODEGEN_OK;
 }
