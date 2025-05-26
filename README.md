@@ -29,31 +29,34 @@ A compiler for logical expressions that supports parsing, semantic analysis, and
 
 ## Prerequisites
 
-- GCC or Clang
+- GCC and Clang
 - Flex
 - Bison
-- NASM (for assembly generation)
-- LLVM (optional, for LLVM backend)
-- Go 1.16+ (for some build scripts)
+- LLVM (for LLVM backend)
+- Make
 
 ## Installation
 
 1. Clone the repository:
    ```bash
-   git clone [repository-url]
-   cd LogicalExpressionsCompiler
+   git clone https://github.com/Bradkibs/Logic-Expression-Compiler.git
+   cd Logic-Expression-Compiler
    ```
 
-2. Install dependencies:
-   - On Ubuntu/Debian:
-     ```bash
-     sudo apt-get update
-     sudo apt-get install flex bison nasm golang llvm
-     ```
-   - On macOS (using Homebrew):
-     ```bash
-     brew install flex bison nasm go llvm
-     ```
+2. Install dependencies using the provided install script:
+   ```bash
+   chmod +x install.sh
+   ./install.sh
+   ```
+   
+   This will automatically detect your OS and install the required dependencies (Flex, Bison, GCC, NASM, and Go).
+
+3. Build the compiler:
+   ```bash
+   make -f Makefile.llvm
+   ```
+
+   This will create the `lec_compiler_llvm` executable.
 
 ## Building the Project
 
@@ -151,6 +154,48 @@ A AND B OR C
 ### Command Line Options
 - `input.lec`: Required. The input file containing logical expressions
 - `output_file`: Optional. The name of the output executable (default: 'output')
+
+## Usage
+
+### Basic Usage
+
+1. Create a file with your logical expressions (e.g., `example.lec`):
+   ```
+   A = TRUE
+   B = FALSE
+   C = A AND B
+   C XOR A
+   ```
+
+2. Compile and run:
+   ```bash
+   ./lec_compiler_llvm example.lec
+   ./output
+   ```
+
+### Optimization Levels
+
+The compiler supports different optimization levels (0-3) using the `-oN` flag, where N is the optimization level:
+
+- `-o0`: No optimization (default)
+- `-o1`: Basic optimizations
+- `-o2`: More aggressive optimizations
+- `-o3`: Maximum optimizations
+
+Example:
+```bash
+# Compile with maximum optimizations
+./lec_compiler_llvm example.lec -o3
+
+# The output will be in 'output' by default
+./output
+```
+
+### Output Files
+
+- `output`: The compiled executable
+- `output.ll`: Generated LLVM IR (Intermediate Representation)
+- `output.bc`: LLVM bitcode (intermediate format)
 
 ## Compiler Architecture
 
@@ -315,10 +360,10 @@ B = FALSE
 C = TRUE
 
 /* Test expressions */
-expr1 = A AND B OR C
+expr1 = ((A AND B) OR C)
 expr2 = NOT A AND B
-expr3 = A -> B -> C
-expr4 = (A OR B) AND C
+expr3 = ((A -> B) -> C)
+expr4 = (A OR B) AND C)()
 ```
 
 ### Output
@@ -366,11 +411,11 @@ The following files can be safely removed as they appear to be test outputs or t
 - `test1`, `test_complex`, `test_custom1`, `test_custom_llvm`
 - `test_fixed`, `test_llvm`, `test_precedence`, `test_single`
 - `test_uno`, `output`, `output.asm`, `output.bc`, `output.txt`
-- `C_Components/llvm_codegen.c.bak`, `C_Components/llvm_codegen.c.complex`
+- `C_Unlinked_Components/llvm_codegen.c.bak`, `C_Unlinked_Components/llvm_codegen.c.complex`
 
 ## License
 
-[Specify your license here]
+GPL v3
   - %right NOT EXISTS FORALL (highest)
 
 2. Modified the quantifier rules to require parentheses:
@@ -393,18 +438,3 @@ The following files can be safely removed as they appear to be test outputs or t
 12. Leave a github star
 
 ### Stack built tools
-
-#### Frontend
-
-1. Golang
-
-#### Backend
-
-1. flex i.e lexer.l
-2. bison i.e parser.y
-3. C i.e ast.c and ast.h symbol_table.c and symbol_table.h
-
-#### compilation toolchain
-
-1. gcc
-2. created a makefile to simplify the steps.

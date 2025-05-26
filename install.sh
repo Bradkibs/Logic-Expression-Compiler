@@ -27,8 +27,8 @@ install_ubuntu_deps() {
         flex \
         bison \
         gcc \
-        nasm \
-        golang
+        clang \
+        llvm
     echo "Dependencies installed successfully for Ubuntu/Debian."
 }
 
@@ -40,8 +40,8 @@ install_fedora_deps() {
         flex \
         bison \
         gcc \
-        nasm \
-        golang
+        clang \
+        llvm
     echo "Dependencies installed successfully for Fedora/RHEL/CentOS."
 }
 
@@ -57,7 +57,7 @@ install_macos_deps() {
     brew install \
         flex \
         bison \
-        nasm
+        llvm
     echo "Dependencies installed successfully for macOS."
 }
 
@@ -78,7 +78,8 @@ case "$OS" in
         echo "  - flex"
         echo "  - bison"
         echo "  - gcc"
-        echo "  - nasm"
+        echo "  - clang"
+        echo "  - llvm"
         exit 1
         ;;
 esac

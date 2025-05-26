@@ -1,13 +1,13 @@
 CC = gcc
-CFLAGS = -c -g -Wall -I./C_Components -MMD -MP
+CFLAGS = -c -g -Wall -I./C_Unlinked_Components -MMD -MP
 LLVM_CFLAGS = $(shell llvm-config --cflags)
 LLVM_LDFLAGS = $(shell llvm-config --ldflags)
-LLVM_LIBS = $(shell llvm-config --libs core analysis bitwriter executionengine)
+LLVM_LIBS = $(shell llvm-config --libs core analysis bitwriter executionengine transformutils scalaropts ipo vectorize) $(shell llvm-config --system-libs)
 AR = ar
 ARFLAGS = rcs
 SHELL := /bin/bash
 
-SRC_DIR = C_Components
+SRC_DIR = C_Unlinked_Components
 
 LEXER_L = $(SRC_DIR)/lexer.l
 PARSER_Y = $(SRC_DIR)/parser.y
@@ -28,7 +28,7 @@ OBJS = lexer.o parser.o ast.o symbol_table.o semantic_analyzer.o llvm_codegen.o 
 LIB = liblogic_llvm.a
 
 # Define main targets
-.PHONY: all clean check-deps
+.PHONY: all clean clean_everything check-deps
 
 # Main build target with all executables
 all: check-deps $(LIB) lec_compiler_llvm
@@ -59,8 +59,8 @@ symbol_table.o: $(SYMBOL_TABLE_C) $(SYMBOL_TABLE_H)
 semantic_analyzer.o: $(SEMANTIC_ANALYZER_C) $(SRC_DIR)/semantic_analyzer.h
 	$(CC) $(CFLAGS) -o $@ $(SEMANTIC_ANALYZER_C)
 
-llvm_codegen.o: $(LLVM_CODEGEN_C) $(SRC_DIR)/llvm_codegen.h
-	$(CC) $(CFLAGS) $(LLVM_CFLAGS) -o $@ $(LLVM_CODEGEN_C)
+llvm_codegen.o: $(LLVM_CODEGEN_C) $(LLVM_CODEGEN_H)
+	$(CC) $(CFLAGS) $(LLVM_CFLAGS) -D_GNU_SOURCE -o $@ $(LLVM_CODEGEN_C)
 
 node_to_string.o: $(NODE_TO_STRING_C) $(SRC_DIR)/ast.h
 	$(CC) $(CFLAGS) -o $@ $(NODE_TO_STRING_C)
@@ -75,6 +75,10 @@ $(LIB): $(OBJS)
 clean:
 	rm -f $(OBJS) *.d *.o $(LIB) lec_compiler_llvm *.bc output
 
+# Clean everything including generated parser and lexer files
+clean_everything: clean
+	rm -f $(LEXER_C) $(PARSER_C) $(PARSER_H) *.ll
+
 # Check dependencies
 check-deps:
 	@if ! command -v llvm-config > /dev/null || ! command -v clang > /dev/null || ! command -v bison > /dev/null || ! command -v flex > /dev/null; then \
@@ -83,5 +87,5 @@ check-deps:
 	fi
 
 # LLVM Logical Expression Compiler executable
-lec_compiler_llvm: lec_compiler_llvm.c $(LIB)
-	$(CC) -g -Wall -o lec_compiler_llvm lec_compiler_llvm.c -I. -L. -llogic_llvm -lm $(LLVM_CFLAGS) $(LLVM_LDFLAGS) $(LLVM_LIBS)
+lec_compiler_llvm: lec_compiler_llvm.o $(LIB)
+	$(CC) -g -Wall -o $@ lec_compiler_llvm.o -I. -L. -llogic_llvm -lm $(LLVM_CFLAGS) $(LLVM_LDFLAGS) $(LLVM_LIBS)
