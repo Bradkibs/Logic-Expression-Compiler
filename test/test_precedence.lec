@@ -1,0 +1,10 @@
+A = TRUE
+B = FALSE
+C = TRUE
+
+(A AND B) OR C
+(NOT A) AND B
+(A -> B) -> C
+(NOT A OR (B AND C)) -> (A <-> B)
+(A OR B) AND C  
+(A AND B) OR (C AND (NOT A))

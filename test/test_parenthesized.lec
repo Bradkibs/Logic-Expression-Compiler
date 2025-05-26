@@ -1,0 +1,7 @@
+A = TRUE
+B = FALSE
+C = TRUE
+D = FALSE
+((A AND B) OR (C AND D)) OR (A XOR B)
+(A AND B) OR C
+NOT A OR B AND C

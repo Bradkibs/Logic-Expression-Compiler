@@ -7,7 +7,6 @@
 *.s
 *.out
 lec_compiler_llvm
-test_*
 output*
 
 # Generated files

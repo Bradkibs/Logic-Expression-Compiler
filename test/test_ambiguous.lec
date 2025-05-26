@@ -1,0 +1,4 @@
+A = TRUE
+B = FALSE
+C = TRUE
+A AND B OR C
