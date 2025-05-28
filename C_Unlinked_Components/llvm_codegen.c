@@ -217,7 +217,9 @@ LLVMCodegenResult generate_llvm_ir(MultiStatementAST* multi_ast, SymbolTable* sy
         return result;
     }
     
-    // Debug: Print symbol table contents
+    // Symbol table contents are now printed in the main compiler file
+    // to avoid duplication, so we don't print them here
+    /*
     printf("\nSymbol table at codegen time (size: %d):\n", symbol_table->size);
     for (int i = 0; i < symbol_table->size; i++) {
         printf("  %s = %s\n", 
@@ -225,6 +227,7 @@ LLVMCodegenResult generate_llvm_ir(MultiStatementAST* multi_ast, SymbolTable* sy
                symbol_table->symbols[i].value ? "TRUE" : "FALSE");
     }
     printf("\n");
+    */
     
     // Initialize LLVM
     LLVMInitializeNativeTarget();

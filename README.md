@@ -2,6 +2,13 @@
 
 A compiler for logical expressions that supports parsing, semantic analysis, and code generation. The compiler can handle various logical operators and generate intermediate representations or assembly code.
 
+## Recent Improvements (May 2025)
+
+- **Enhanced Lexical Analysis Output**: Improved token type display with accurate mapping between lexemes and token types
+- **Streamlined Compiler Output**: Removed redundant information and simplified the output format
+- **Annotated AST**: Display now focuses on showing variable values in a clearer, more readable format
+- **Single Symbol Table Display**: Consolidated symbol table output to prevent duplication
+
 ## Features
 
 - **Lexical Analysis**: Tokenizes input using Flex

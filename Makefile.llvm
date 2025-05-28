@@ -31,7 +31,7 @@ LIB = liblogic_llvm.a
 .PHONY: all clean clean_everything check-deps
 
 # Main build target with all executables
-all: check-deps $(LIB) lec_compiler_llvm
+all: check-deps $(LIB) lec_compiler_llvm lec_compiler_llvm_with_printed_output
 
 -include $(OBJS:.o=.d)
 
@@ -73,7 +73,7 @@ $(LIB): $(OBJS)
 	$(AR) $(ARFLAGS) $@ $(OBJS)
 
 clean:
-	rm -f $(OBJS) *.d *.o $(LIB) lec_compiler_llvm *.bc output
+	rm -f $(OBJS) *.d *.o $(LIB) lec_compiler_llvm lec_compiler_llvm_with_printed_output *.bc output
 
 # Clean everything including generated parser and lexer files
 clean_everything: clean
@@ -89,3 +89,7 @@ check-deps:
 # LLVM Logical Expression Compiler executable
 lec_compiler_llvm: lec_compiler_llvm.o $(LIB)
 	$(CC) -g -Wall -o $@ lec_compiler_llvm.o -I. -L. -llogic_llvm -lm $(LLVM_CFLAGS) $(LLVM_LDFLAGS) $(LLVM_LIBS)
+
+# LLVM Logical Expression Compiler with detailed output
+lec_compiler_llvm_with_printed_output: lec_compiler_llvm_with_printed_output.o $(LIB)
+	$(CC) -g -Wall -o $@ lec_compiler_llvm_with_printed_output.o -I. -L. -llogic_llvm -lm $(LLVM_CFLAGS) $(LLVM_LDFLAGS) $(LLVM_LIBS)
